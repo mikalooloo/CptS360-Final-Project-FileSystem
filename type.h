@@ -1,3 +1,15 @@
+#ifndef TYPE_H
+#define TYPE_H
+
+#include <stdio.h>
+#include <stdlib.h>
+#include <fcntl.h>
+#include <ext2fs/ext2_fs.h>
+#include <string.h>
+#include <libgen.h>
+#include <sys/stat.h>
+#include <time.h>
+
 /*************** type.h file for LEVEL-1 ****************/
 typedef unsigned char  u8;
 typedef unsigned short u16;
@@ -30,10 +42,15 @@ typedef struct minode{
   struct mntable *mptr;  // for level-3
 }MINODE;
 
-typedef struct proc{
-  struct proc *next;
-  int          pid;      // process ID  
-  int          uid;      // user ID
-  int          gid;
-  MINODE      *cwd;      // CWD directory pointer  
-}PROC;
+typedef struct proc
+{
+    struct proc *next;
+    int pid;
+    int ppid;
+    int status;
+    int uid, gid;
+    MINODE *cwd;
+    // OFT *fd[NFD];
+} PROC;
+
+#endif

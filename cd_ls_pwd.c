@@ -1,3 +1,5 @@
+#include "header.h"
+
 /************* cd_ls_pwd.c file **************/
 int cd()
 {
@@ -47,9 +49,19 @@ char *pwd(MINODE *wd)
   printf("pwd: READ HOW TO pwd in textbook!!!!\n");
   if (wd == root){
     printf("/\n");
-    return;
+    return '\0';
   }
 }
 
-
+int quit()
+{
+  int i;
+  MINODE *mip;
+  for (i=0; i<NMINODE; i++){
+    mip = &minode[i];
+    if (mip->refCount > 0)
+      iput(mip);
+  }
+  exit(0);
+}
 

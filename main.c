@@ -1,15 +1,6 @@
 /****************************************************************************
 *                   KCW: mount root file system                             *
 *****************************************************************************/
-#include <stdio.h>
-#include <stdlib.h>
-#include <fcntl.h>
-#include <ext2fs/ext2_fs.h>
-#include <string.h>
-#include <libgen.h>
-#include <sys/stat.h>
-#include <time.h>
-
 #include "type.h"
 
 extern MINODE *iget();
@@ -126,16 +117,4 @@ int main(int argc, char *argv[ ])
     else if (strcmp(cmd, "quit")==0)
        quit();
   }
-}
-
-int quit()
-{
-  int i;
-  MINODE *mip;
-  for (i=0; i<NMINODE; i++){
-    mip = &minode[i];
-    if (mip->refCount > 0)
-      iput(mip);
-  }
-  exit(0);
 }
