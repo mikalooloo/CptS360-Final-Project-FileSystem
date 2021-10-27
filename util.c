@@ -191,11 +191,43 @@ int getino(char *pathname)
 }
 
 // These 2 functions are needed for pwd()
+// this looks for myname in the data blocks of parent - like the search() function except just copies into myname instead of returning
 int findmyname(MINODE *parent, u32 myino, char myname[ ]) 
 {
   // WRITE YOUR code here
   // search parent's data block for myino; SAME as search() but by myino
   // copy its name STRING to myname[ ]
+
+   int i; 
+   char *cp, c, sbuf[BLKSIZE], temp[256];
+   DIR *dp;
+   INODE *ip;
+
+   printf("search for %s in MINODE = [%d, %d]\n", myname, parent->dev, parent->ino);
+   ip = &(parent->INODE);
+
+   /*** search for name in mip's data blocks: ASSUME i_block[0] ONLY ***/
+
+   get_block(dev, ip->i_block[0], sbuf);
+   dp = (DIR *)sbuf;
+   cp = sbuf;
+   printf("  ino   rlen  nlen  name\n");
+
+   while (cp < sbuf + BLKSIZE){
+     strncpy(temp, dp->name, dp->name_len);
+     temp[dp->name_len] = 0;
+     printf("%4d  %4d  %4d    %s\n", 
+           dp->inode, dp->rec_len, dp->name_len, dp->name);
+
+     if (!strcmp(temp, myname)) {
+        printf("found %s : ino = %d\n", temp, dp->inode);
+        myname[dp->name_len] = '\0';
+        return 1;
+     }
+     cp += dp->rec_len;
+     dp = (DIR *)cp;
+   }
+   return 0;
 }
 
 int findino(MINODE *mip, u32 *myino) // myino = i# of . return i# of ..
@@ -203,4 +235,6 @@ int findino(MINODE *mip, u32 *myino) // myino = i# of . return i# of ..
   // mip points at a DIR minode
   // WRITE your code here: myino = ino of .  return ino of ..
   // all in i_block[0] of this DIR INODE.
+
+
 }

@@ -1,11 +1,34 @@
 #include "header.h"
 
-/************* cd_ls_pwd.c file **************/
-int cd()
-{
-  printf("cd: under construction READ textbook!!!!\n");
+extern int dev;
 
-  // READ Chapter 11.7.3 HOW TO chdir
+/************* cd_ls_pwd.c file **************/
+
+// changes cwd to pathname
+// returns 1 if successful, 0 if failed
+int cd(char * pathname)
+{
+  // (1). int ino = getino(pathname); // return error if ino=0
+  int ino = getino(pathname);
+  if (!ino) {
+    printf("ino is zero as it cannot be found\n");
+    return 0;
+  }
+
+  // (2). MINODE *mip = iget(dev, ino);
+  MINODE *mip = iget(dev, ino);
+
+  // (3). Verify mip->INODE is a DIR // return error if not DIR
+  if (!S_ISDIR(mip->INODE.i_mode)) {
+    printf("mip->INODE is not a DIR\n");
+    return 0;
+  }
+  // (4). iput(running->cwd); // release old cwd
+  iput(running->cwd);
+
+  // (5). running->cwd = mip; // change cwd to mip
+  running->cwd = mip;
+  return 1;
 }
 
 int ls_file(MINODE *mip, char *name)
@@ -44,12 +67,44 @@ int ls()
   ls_dir(running->cwd);
 }
 
+// recursive function for pwd
+void rpwd(MINODE *wd) {
+  // (1). if (wd==root) return;
+  if (wd == root) {
+    return;
+  }
+
+  // (2). from wd->INODE.i_block[0], get my_ino and parent_ino
+  char buf[BLKSIZE];
+  get_block(dev, wd->INODE.i_block[0], buf);
+
+  int my_ino;
+  int parent_ino;
+  parent_ino = findino(wd, &my_ino);
+
+  // (3). pip = iget(dev, parent_ino);
+  MINODE * pip = iget(dev, parent_ino);
+
+  // (4). from pip->INODE.i_block[ ]: get my_name string by my_ino as LOCAL
+  char my_name[256];
+  findmyname(pip, my_ino, my_name);
+
+  // (5). rpwd(pip); // recursive call rpwd(pip) with parent minode
+  rpwd(pip);
+
+  // (6). print "/%s", my_name;
+  printf("/%s", my_name);
+}
+
+
 char *pwd(MINODE *wd)
 {
-  printf("pwd: READ HOW TO pwd in textbook!!!!\n");
-  if (wd == root){
+  if (wd == root) {
     printf("/\n");
-    return '\0';
+  }
+  else {
+    rpwd(wd);
+    printf("\n");
   }
 }
 
