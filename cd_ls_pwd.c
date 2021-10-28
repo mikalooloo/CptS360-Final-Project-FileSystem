@@ -38,8 +38,8 @@ int ls_file(MINODE *mip, char *name)
 {
   //vars initialized
   int r, i;
-  char ftime[64];
-
+  char ftime[256];
+  
   //check inode, output accordingly
   if((mip->INODE.i_mode & 0xF000) == 0x8000)
   {
@@ -72,12 +72,10 @@ int ls_file(MINODE *mip, char *name)
   printf("%4d ", mip->INODE.i_gid);
   printf("%4d ", mip->INODE.i_uid);
   printf("%8d ", mip->INODE.i_size);
-
   //copy string, then print
-  strcpy(ftime, ctime(&mip->INODE.i_ctime));
+  strcpy(ftime, ctime((time_t *)&mip->INODE.i_mtime));
   ftime[strlen(ftime) - 1] = 0;
   printf("%s ", ftime);
-
   //output name
   //basename incl
   printf("%s", basename(name));
@@ -95,32 +93,47 @@ int ls_file(MINODE *mip, char *name)
 
 int ls_dir(MINODE *mip)
 {
-  //printf("ls_dir: list CWD's file names; YOU FINISH IT as ls -l\n");
-
   char buf[BLKSIZE], temp[256];
   DIR *dp;
   char *cp;
+  MINODE * mip2;
 
   get_block(dev, mip->INODE.i_block[0], buf);
   dp = (DIR *)buf;
   cp = buf;
-  
+
   while (cp < buf + BLKSIZE){
      strncpy(temp, dp->name, dp->name_len);
      temp[dp->name_len] = 0;
 	
-     printf("%s  ", temp);
-
+     //printf("%s  ", temp);
+     mip2 = iget(dev, dp->inode);
+     
+     ls_file(mip2, temp);
+     mip2->dirty = 1;
+     iput(mip2);
+      
      cp += dp->rec_len;
      dp = (DIR *)cp;
   }
   printf("\n");
 }
 
-int ls()
+int ls(char * pathname)
 {
-  printf("ls: list CWD only! YOU FINISH IT for ls pathname\n");
-  ls_dir(running->cwd);
+  if (strcmp(pathname, "") != 0) printf("\nls %s\n", pathname);
+  else printf("\nls cwd\n");
+
+  if (!strcmp(pathname, "")) ls_dir(running->cwd); // if ls the cwd
+  else { // otherwise
+    dev = root->dev;
+    int ino = getino(pathname);
+    MINODE * mip = iget(dev, ino);
+
+    if ((mip->INODE.i_mode & 0xF000) == 0x4000) ls_dir(mip);
+    else ls_file(mip, basename(pathname));
+    iput(mip);
+  }
 }
 
 // recursive function for pwd
@@ -158,11 +171,11 @@ void rpwd(MINODE *wd) {
 char *pwd(MINODE *wd)
 {
   if (wd == root) {
-    printf("/\n");
+    printf("\n/\n\n");
   }
   else {
     rpwd(wd);
-    printf("\n");
+    printf("\n\n");
   }
 }
 

@@ -141,7 +141,7 @@ int search(MINODE *mip, char *name)
      printf("%4d  %4d  %4d    %s\n", 
            dp->inode, dp->rec_len, dp->name_len, dp->name);
      if (strcmp(temp, name)==0){
-        printf("found %s : ino = %d\n", temp, dp->inode);
+        printf("found %s : ino = %d\n\n", temp, dp->inode);
         return dp->inode;
      }
      cp += dp->rec_len;
@@ -223,7 +223,7 @@ int findmyname(MINODE *parent, u32 myino, char myname[ ])
             //dp->inode, dp->rec_len, dp->name_len, dp->name);
          if (dp->inode == myino){
          //if (!strcmp(temp, myname)) {
-            printf("found %s : ino = %d\n", temp, dp->inode);
+            printf("found %s : ino = %d\n\n", temp, dp->inode);
             strncpy(myname, dp->name, dp->name_len);
              myname[dp->name_len] = 0;
             return 1;
