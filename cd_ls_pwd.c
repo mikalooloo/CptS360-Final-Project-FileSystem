@@ -147,6 +147,8 @@ void rpwd(MINODE *wd) {
 
   // (5). rpwd(pip); // recursive call rpwd(pip) with parent minode
   rpwd(pip);
+  pip->dirty = 1;
+  iput(pip);
 
   // (6). print "/%s", my_name;
   printf("/%s", my_name);

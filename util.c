@@ -206,35 +206,46 @@ int findmyname(MINODE *parent, u32 myino, char myname[ ])
    printf("search for %s in MINODE = [%d, %d]\n", myname, parent->dev, parent->ino);
    ip = &(parent->INODE);
 
-   /*** search for name in mip's data blocks: ASSUME i_block[0] ONLY ***/
+   /*** search for name in mip's data blocks:  ***/
 
-   get_block(dev, ip->i_block[0], sbuf);
-   dp = (DIR *)sbuf;
-   cp = sbuf;
-   printf("  ino   rlen  nlen  name\n");
+   // going to 11 because direct blocks go from i_block[0] to i_block[11]
+   for (i = 0; i <= 11; ++i) {
+      if (!ip->i_block[i]) return 0;
 
-   while (cp < sbuf + BLKSIZE){
-     strncpy(temp, dp->name, dp->name_len);
-     temp[dp->name_len] = 0;
-     printf("%4d  %4d  %4d    %s\n", 
-           dp->inode, dp->rec_len, dp->name_len, dp->name);
+      get_block(dev, ip->i_block[0], sbuf);
+      dp = (DIR *)sbuf;
+      cp = sbuf;
 
-     if (!strcmp(temp, myname)) {
-        printf("found %s : ino = %d\n", temp, dp->inode);
-        myname[dp->name_len] = '\0';
-        return 1;
-     }
-     cp += dp->rec_len;
-     dp = (DIR *)cp;
+      while (cp < sbuf + BLKSIZE){
+         strncpy(temp, dp->name, dp->name_len);
+         temp[dp->name_len] = 0;
+         //printf("%4d  %4d  %4d    %s\n", 
+            //dp->inode, dp->rec_len, dp->name_len, dp->name);
+         if (dp->inode == myino){
+         //if (!strcmp(temp, myname)) {
+            printf("found %s : ino = %d\n", temp, dp->inode);
+            strncpy(myname, dp->name, dp->name_len);
+             myname[dp->name_len] = 0;
+            return 1;
+         }
+         cp += dp->rec_len;
+         dp = (DIR *)cp;
+      }
    }
+   
    return 0;
 }
 
 int findino(MINODE *mip, u32 *myino) // myino = i# of . return i# of ..
 {
   // mip points at a DIR minode
+  char buf[BLKSIZE];
+  get_block(mip->dev, mip->INODE.i_block[0], buf);
+
   // WRITE your code here: myino = ino of .  return ino of ..
   // all in i_block[0] of this DIR INODE.
-
-
+   DIR * dp = (DIR *) buf;
+   * myino = dp->inode;
+   dp = (DIR *) (buf + dp->rec_len);
+   return dp->inode;
 }
