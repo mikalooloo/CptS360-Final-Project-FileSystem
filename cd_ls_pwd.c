@@ -2,6 +2,9 @@
 
 extern int dev;
 
+char *t1 = "xwrxwrxwr-------";
+char *t2 = "----------------";
+
 /************* cd_ls_pwd.c file **************/
 
 // changes cwd to pathname
@@ -33,13 +36,66 @@ int cd(char * pathname)
 
 int ls_file(MINODE *mip, char *name)
 {
-  printf("ls_file: to be done: READ textbook!!!!\n");
-  // READ Chapter 11.7.3 HOW TO ls
+  //vars initialized
+  int r, i;
+  char ftime[64];
+
+  //check inode, output accordingly
+  if((mip->INODE.i_mode & 0xF000) == 0x8000)
+  {
+	  printf("%c", '-');
+  }
+  if((mip->INODE.i_mode & 0xF000) == 0x4000)
+  {
+	  printf("%c", 'd');
+  }
+  if((mip->INODE.i_mode & 0xF000) == 0xA000)
+  {
+	  printf("%c", 'l');
+  }
+
+  //iterate through
+  for(i = 8; i >= 0; i--)
+  {
+	  if(mip->INODE.i_mode & (1 << i))
+	  {
+		  printf("%c", t1[i]);
+	  }
+	  else
+	  {
+		  printf("%c", t2[i]);
+	  }
+  }
+
+  //output 
+  printf("%4d ", mip->INODE.i_links_count);
+  printf("%4d ", mip->INODE.i_gid);
+  printf("%4d ", mip->INODE.i_uid);
+  printf("%8d ", mip->INODE.i_size);
+
+  //copy string, then print
+  strcpy(ftime, ctime(&mip->INODE.i_ctime));
+  ftime[strlen(ftime) - 1] = 0;
+  printf("%s ", ftime);
+
+  //output name
+  //basename incl
+  printf("%s", basename(name));
+
+  //print->linkname
+  if((mip->INODE.i_mode & 0xF000) == 0xA000)
+  {
+	  char buffer[256];
+	  strcpy(buffer,(char *)mip->INODE.i_block);
+	  printf("->");
+	  printf("%s", buffer);
+  }
+  printf("\n");
 }
 
 int ls_dir(MINODE *mip)
 {
-  printf("ls_dir: list CWD's file names; YOU FINISH IT as ls -l\n");
+  //printf("ls_dir: list CWD's file names; YOU FINISH IT as ls -l\n");
 
   char buf[BLKSIZE], temp[256];
   DIR *dp;
