@@ -13,4 +13,10 @@ int getino(char *pathname);
 int findmyname(MINODE *parent, u32 myino, char myname[ ]) ;
 int findino(MINODE *mip, u32 *myino);
 
+int cd(char * pathname);
+int ls(char * pathname);
+char *pwd(MINODE *wd);
+int quit();
+int mkdir0(char pathname[128]);
+
 #endif

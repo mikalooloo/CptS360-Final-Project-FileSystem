@@ -17,6 +17,10 @@ extern int nblocks, ninodes, bmap, imap, iblk;
 
 extern char line[128], cmd[32], pathname[128];
 
+off_t lseek(int fildes, off_t offset, int whence);
+ssize_t read(int fildes, void *buf, size_t nybte);
+ssize_t write(int fildes, const void * buf, size_t nbyte);
+
 int get_block(int dev, int blk, char *buf)
 {
    lseek(dev, (long)blk*BLKSIZE, 0);
@@ -49,6 +53,8 @@ int tokenize(char *pathname)
   for (i= 0; i<n; i++)
     printf("%s  ", name[i]);
   printf("\n");
+
+  return n;
 }
 
 // return minode pointer to loaded INODE

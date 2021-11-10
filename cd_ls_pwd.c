@@ -1,7 +1,9 @@
 #include "header.h"
 
 extern int dev;
-
+extern MINODE minode[NMINODE];
+extern PROC   proc[NPROC], *running;
+extern MINODE *root;
 char *t1 = "xwrxwrxwr-------";
 char *t2 = "----------------";
 

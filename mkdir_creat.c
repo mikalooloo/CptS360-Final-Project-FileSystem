@@ -1,9 +1,11 @@
-#include "type.h"
+#include "header.h"
+
 
 // helper functions and such
-extern int imap, ninodes;
+extern int imap, ninodes, dev;
+extern char * name[64];
 
-int tst_bit(char *buf, int bit); // in Chapter 11.3.1
+/*int tst_bit(char *buf, int bit); // in Chapter 11.3.1
 
 int set_bit(char *buf, int bit); // in Chapter 11.3.1
 
@@ -24,15 +26,27 @@ int ialloc(int dev)  // allocate an inode number from inode_bitmap
     }
   }
   return 0;
-}
+}*/
 
 // meat of the bones here
 
-int mkdir(int dev) {
+int mkdir0(char pathname[128]) {
     // (1). divide pathname into dirname and basename, e.g. pathname=/a/b/c, then dirname=/a/b; basename=c;
+    char dname[128] = "", bname[128];
+    int n = tokenize(pathname);
+    int i;
+    printf("n = %d\n", n);
+    for (i = 0; i < (n-1); ++i) {
+      printf("dname: %s\n", dname);
+      strcat(dname, "/");
+      strcat(dname, name[i]);
+    }
+    if (i == 0) strcat(dname, "/");
+    strcpy(bname, name[i]);
 
+    printf("\ntest: \ndname: %s\nbname: %s\n\n", dname, bname);
     // (2). // dirname must exist and is a DIR:
-    int pino = getino(dirname);
+    /*int pino = getino(dirname);
     int pmip = iget(dev, pino);
     //check pmip->INODE is a DIR
 
@@ -43,15 +57,15 @@ int mkdir(int dev) {
     kmkdir(pmip, basename, dev);
     
     // (5). increment parent INODE’s links_count by 1 and mark pmip dirty;
-    iput(pmip);
+    iput(pmip);*/
 }
 
 int kmkdir(int pmip, int basename, int dev) {
   // kmkdir() consists of 4 major steps:
 
   // (4).1. Allocate an INODE and a disk block:
-  int ino = ialloc(dev);
-  int blk = balloc(dev);
+  //int ino = ialloc(dev);
+  //int blk = balloc(dev);
 
   // (4).2. mip = iget(dev, ino) // load INODE into a minode
   //initialize mip->INODE as a DIR INODE;
@@ -65,7 +79,7 @@ int kmkdir(int pmip, int basename, int dev) {
   // (4).4. enter_child(pmip, ino, basename); which enters (ino, basename) as a dir_entry to the parent INODE;
 }
 
-int creat() {
+int creat0() {
 
 }
 
