@@ -24,5 +24,6 @@ int my_link(char *pathname);
 
 int enter_name(MINODE * pip, int ino, char * name);
 int balloc(int dev);
+char * rpwd(MINODE *wd, int print);
 
 #endif

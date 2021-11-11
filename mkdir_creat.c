@@ -114,9 +114,6 @@ int enter_name(MINODE * pip, int ino, char * name) {
     //need_length = 4* ((8 + strlen(name) + 3)/4); // a multiple of 4
 
     // (4). Step to the last entry in the data block:
-    get_block(pip->dev, pip->INODE.i_block[i], buf);
-    dp = (DIR *)buf;
-    cp = buf;
     while (cp + dp->rec_len < buf + BLKSIZE){
       cp += dp->rec_len;
       dp = (DIR *)cp;
@@ -126,6 +123,7 @@ int enter_name(MINODE * pip, int ino, char * name) {
     // remain = LAST entry’s rec_len - its ideal_length;
     ideal_length = 4 * ((8 + dp->name_len + 3)/4);
     int remain = dp->rec_len - ideal_length;
+
     if (remain >= need_length) {
     // enter the new entry as the LAST entry and
     // trim the previous entry rec_len to its ideal_length;
@@ -144,7 +142,7 @@ int enter_name(MINODE * pip, int ino, char * name) {
     else { // no space in existing data blocks
       // Allocate a new data block; increment parent size by BLKSIZE;
       // Enter new entry as the first entry in the new data block with rec_len¼BLKSIZE.
-      pip->INODE.i_size = BLKSIZE;
+      pip->INODE.i_size += BLKSIZE;
       blk = balloc(dev);
       pip->INODE.i_block[i] = blk;
       pip->dirty = 1;
@@ -159,7 +157,7 @@ int enter_name(MINODE * pip, int ino, char * name) {
       strcpy(dp->name, name); // setting name
       
       put_block(dev, blk, buf);
-      return 1;
+      return 0;
     }
   }
 
@@ -171,7 +169,8 @@ int kmkdir(MINODE * pmip, char basename[128]) {
   // (4).1. Allocate an INODE and a disk block:
   int ino = ialloc(dev);
   int blk = balloc(dev);
-
+  printf("ino: %d, blk: %d\n", ino, blk);
+  
   // (4).2. mip = iget(dev, ino) // load INODE into a minode
   //initialize mip->INODE as a DIR INODE;
   MINODE *mip = iget(dev, ino);
@@ -196,15 +195,18 @@ int kmkdir(MINODE * pmip, char basename[128]) {
 
   get_block(dev, blk, buf);
   DIR *dp = (DIR *)buf;
+  char *cp = buf;
   // make . entry
   dp->inode = ino;
   dp->rec_len = 12;
   dp->name_len = 1;
   dp->name[0] = '.';
+  // move to next entry
+  cp += dp->rec_len;
+  dp = (DIR *)cp;
   // make .. entry: pino=parent DIR ino, blk=allocated block
-  dp = (DIR *)((char *)dp + 12);
   dp->inode = pmip->ino;
-  dp->rec_len = BLKSIZE-12; // rec_len spans block
+  dp->rec_len = (BLKSIZE-12); // rec_len spans block
   dp->name_len = 2;
   dp->name[0] = dp->name[1] = '.';
   put_block(dev, blk, buf); // write to blk on diks
@@ -218,40 +220,56 @@ int kmkdir(MINODE * pmip, char basename[128]) {
 int mymkdir(char pathname[128]) {
     // (1). divide pathname into dirname and basename, e.g. pathname=/a/b/c, then dirname=/a/b; basename=c;
     char dname[128] = "", bname[128];
-    int n = tokenize(pathname);
+    int n = (tokenize(pathname) - 1);
     int i;
+    int absolute;
 
-    for (i = 0; i < (n-1); ++i) {
+    for (i = 0; i < n; ++i) {
       strcat(dname, "/");
       strcat(dname, name[i]);
     }
-    if (i == 0) strcat(dname, "/");
+
     strcpy(bname, name[i]);
+
+    if (pathname[0] == '/') { // if absolute
+      printf("mkdir name %s is absolute\n", bname);
+      if (i == 0) strcat(dname, "/");
+    }
+    else { // if relative
+      printf("mkdir name %s is relative\n", bname);
+      // getting cwd
+      char path[128];
+      strcpy(path, rpwd(running->cwd, 0));
+      printf("cwd: %s\n", path);
+      strcat(dname, path);
+    }
 
     // (2). // dirname must exist and is a DIR:
     int pino = getino(dname);
     if (pino == -1) {
-      printf("parent %s doesn't exist", dname);
-      return 0;
+      printf("pino %s doesn't exist", dname);
+      return -1;
     }
-
+    printf("pino: %d\n", pino);
     MINODE * pmip = iget(dev, pino);
     //check pmip->INODE is a DIR
     if (!S_ISDIR(pmip->INODE.i_mode)) {
-      printf("mip->INODE %s is not a DIR\n", dname);
-      return 0;
+      printf("pmip->INODE %s is not a DIR\n", dname);
+      return -1;
     }
+    else printf("pmip->INODE %s is a DIR\n", dname);
+
     // (3). // basename must not exist in parent DIR:
     int s = search(pmip, bname); //must return 0;
     if (s != 0) {
       printf("search for %s returned non-zero number %d, so it already exists underneath %s\n", bname, s, dname);
-      return 0;
+      return -1;
     }
 
     // (4). call kmkdir(pmip, basename) to create a DIR;
     kmkdir(pmip, bname);
-    
     // (5). increment parent INODE’s links_count by 1 and mark pmip dirty;
+    pmip->INODE.i_links_count++;
     pmip->dirty = 1;
     iput(pmip);
 }

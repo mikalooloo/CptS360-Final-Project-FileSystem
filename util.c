@@ -223,7 +223,7 @@ int findmyname(MINODE *parent, u32 myino, char myname[ ])
    /*** search for name in mip's data blocks:  ***/
 
    // going to 11 because direct blocks go from i_block[0] to i_block[11]
-   for (i = 0; i <= 11; ++i) {
+   for (i = 0; i < 12; ++i) {
       if (!ip->i_block[i]) return 0;
 
       get_block(dev, ip->i_block[0], sbuf);
