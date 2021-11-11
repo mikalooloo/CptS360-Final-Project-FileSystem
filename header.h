@@ -17,6 +17,6 @@ int cd(char * pathname);
 int ls(char * pathname);
 char *pwd(MINODE *wd);
 int quit();
-int mkdir0(char pathname[128]);
+int mymkdir(char pathname[128]);
 
 #endif

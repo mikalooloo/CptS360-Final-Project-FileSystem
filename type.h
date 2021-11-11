@@ -53,4 +53,27 @@ typedef struct proc
     // OFT *fd[NFD];
 } PROC;
 
+// Open file Table // opened file instance
+typedef struct oft{
+  int mode; // mode of opened file
+  int refCount; // number of PROCs sharing this instance
+  MINODE *minodePtr; // pointer to minode of file
+  int offset; // byte offset for R|W
+}OFT;
+
+// Mount Table structure
+  typedef struct mtable{
+  int dev; // device number; 0 for FREE
+  int ninodes; // from superblock
+  int nblocks;
+  int free_blocks; // from superblock and GD
+  int free_inodes;
+  int bmap; // from group descriptor
+  int imap;
+  int iblock; // inodes start block
+  MINODE *mntDirPtr; // mount point DIR pointer
+  char devName[64]; //device name
+  char mntName[64]; // mount point DIR name
+}MTABLE;
+
 #endif

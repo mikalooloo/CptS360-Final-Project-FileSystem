@@ -95,7 +95,7 @@ int main(int argc, char *argv[ ])
   // WRTIE code here to create P1 as a USER process
   
   while(1){
-    printf("input command : [ls|cd|pwd|mkdir|quit] ");
+    printf("\ninput command : [ls|cd|pwd|mkdir|quit] ");
     fgets(line, 128, stdin);
     line[strlen(line)-1] = 0;
 
@@ -113,7 +113,7 @@ int main(int argc, char *argv[ ])
     else if (strcmp(cmd, "pwd")==0)
        pwd(running->cwd);
     else if (strcmp(cmd, "mkdir")==0)
-       mkdir0(pathname);
+       mymkdir(pathname);
     else if (strcmp(cmd, "quit")==0)
        quit();
   }
