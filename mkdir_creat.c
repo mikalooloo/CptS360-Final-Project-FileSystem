@@ -2,7 +2,7 @@
 
 
 // helper functions and such
-extern int imap, ninodes, dev;
+extern int imap, bmap, ninodes, dev;
 extern char * name[64];
 extern MINODE minode[NMINODE];
 extern PROC   proc[NPROC], *running;
@@ -18,8 +18,9 @@ int set_bit(char *buf, int bit) // in Chapter 11.3.1
   buf[bit/8] |= (1 << (bit % 8));
 }
 
-int decFreeInodes(int dev, char buf[BLKSIZE])
+int decFreeInodes(int dev)
 {
+  char buf[BLKSIZE];
   // dec free inodes count in SUPER and GD
   get_block(dev, 1, buf);
   sp = (SUPER *)buf;
@@ -28,6 +29,19 @@ int decFreeInodes(int dev, char buf[BLKSIZE])
   get_block(dev, 2, buf);
   gp = (GD *)buf;
   gp->bg_free_inodes_count--;
+  put_block(dev, 2, buf);
+}
+
+int decFreeBlocks(int dev)
+{
+  char buf[BLKSIZE];
+  get_block(dev, 1, buf);
+  sp = (SUPER *)buf;
+  sp->s_free_blocks_count--;
+  put_block(dev, 1, buf);
+  get_block(dev, 2, buf);
+  gp = (GD *)buf;
+  gp->bg_free_blocks_count--;
   put_block(dev, 2, buf);
 }
 
@@ -45,7 +59,7 @@ int ialloc(int dev)  // allocate an inode number from inode_bitmap
         set_bit(buf, i);
         put_block(dev, imap, buf);
         printf("allocated ino = %d\n", i+1); // bits count from 0; ino from 1
-        decFreeInodes(dev, buf);
+        decFreeInodes(dev);
         return i+1;
     }
   }
@@ -54,7 +68,18 @@ int ialloc(int dev)  // allocate an inode number from inode_bitmap
 
 int balloc(int dev) 
 {
+  char buf[BLKSIZE];
 
+  get_block(dev, bmap, buf);
+
+  for (int i = 0; i < 12; ++i) {
+    if (tst_bit(buf, i) == 0) {
+      set_bit(buf, i);
+      decFreeBlocks(dev);
+      put_block(dev, bmap, buf);
+      return i + 1;
+    }
+  }
 }
 // meat of the bones here
 
@@ -96,25 +121,48 @@ int enter_name(MINODE * pip, int ino, char * name) {
       cp += dp->rec_len;
       dp = (DIR *)cp;
     }
+
+    // dp NOW points at last entry in block
+    // remain = LAST entry’s rec_len - its ideal_length;
+    ideal_length = 4 * ((8 + dp->name_len + 3)/4);
+    int remain = dp->rec_len - ideal_length;
+    if (remain >= need_length) {
+    // enter the new entry as the LAST entry and
+    // trim the previous entry rec_len to its ideal_length;
+      dp->rec_len = ideal_length;
+      cp += dp->rec_len;
+      dp = (DIR *)cp;
+
+      dp->inode = ino;
+      strcpy(dp->name, name);
+      dp->name_len = strlen(name);
+      dp->rec_len = remain;
+  
+      put_block(dev, blk, buf);
+      return 0;
+    }
+    else { // no space in existing data blocks
+      // Allocate a new data block; increment parent size by BLKSIZE;
+      // Enter new entry as the first entry in the new data block with rec_len¼BLKSIZE.
+      pip->INODE.i_size = BLKSIZE;
+      blk = balloc(dev);
+      pip->INODE.i_block[i] = blk;
+      pip->dirty = 1;
+
+      get_block(dev, blk, buf);
+      dp = (DIR *)buf;
+      cp = buf;
+
+      dp->name_len = strlen(name);
+      strcpy(dp->name, name);
+      dp->inode = ino;
+      dp->rec_len = BLKSIZE;
+
+      put_block(dev, blk, buf);
+      return 1;
+    }
   }
 
-  // dp NOW points at last entry in block
-  // remain = LAST entry’s rec_len - its ideal_length;
-  int remain = dp->rec_len - ideal_length;
-  if (remain >= need_length) {
-  // enter the new entry as the LAST entry and
-  // trim the previous entry rec_len to its ideal_length;
-    dp->rec_len = ideal_length;
-    cp += dp->rec_len;
-    dp = (DIR *)cp;
-
-    dp->inode = ino;
-    strcpy(dp->name, name);
-    dp->name_len = strlen(name);
-    dp->rec_len = remain;
-
-    put_block(dev, blk, buf);
-  }
 }
 
 int kmkdir(MINODE * pmip, char basename[128], int dev) {
@@ -122,13 +170,13 @@ int kmkdir(MINODE * pmip, char basename[128], int dev) {
 
   // (4).1. Allocate an INODE and a disk block:
   int ino = ialloc(dev);
-  int blk = balloc(dev);
+  int bno = balloc(dev);
 
   // (4).2. mip = iget(dev, ino) // load INODE into a minode
   //initialize mip->INODE as a DIR INODE;
   MINODE *mip = iget(dev, ino);
   INODE *ip = &mip->INODE;
-  *ip = (INODE){
+  /**ip = (INODE){
     ip->i_mode = 0x41ED, // 040755: DIR type and permissions
     ip->i_uid = running->uid, // owner uid
     ip->i_gid = running->gid, // group Id
@@ -136,17 +184,26 @@ int kmkdir(MINODE * pmip, char basename[128], int dev) {
     ip->i_links_count = 2, // links count=2 because of . and ..
     ip->i_atime = ip->i_ctime = ip->i_mtime = time(0L),
     ip->i_blocks = 2, // LINUX: Blocks count in 512-byte chunks
-    ip->i_block[0] = blk // new DIR has one data block
-  };
+    ip->i_block[0] = bno // new DIR has one data block
+  };*/
+  ip->i_mode = 0x41ED; // 040755: DIR type and permissions
+  ip->i_uid = running->uid; // owner uid
+  ip->i_gid = running->gid; // group Id
+  ip->i_size = BLKSIZE;// size in bytes
+  ip->i_links_count = 2; // links count=2 because of . and ..
+  ip->i_atime = ip->i_ctime = ip->i_mtime = time(0L);
+  ip->i_blocks = 2; // LINUX: Blocks count in 512-byte chunks
+  ip->i_block[0] = bno;
   for (int i = 1; i < 15; ++i) {
     ip->i_block[i] = 0;
   }
   mip->dirty = 1; // mark minode dirty
   iput(mip); // write INODE to disk
-
+  
   //(4).3. make data block 0 of INODE to contain . and .. entries;
   char buf[BLKSIZE];
   bzero(buf, BLKSIZE); // optional: clear buf[ ] to 0
+  get_block(dev, bno, buf);
   DIR *dp = (DIR *)buf;
   // make . entry
   dp->inode = ino;
@@ -155,12 +212,11 @@ int kmkdir(MINODE * pmip, char basename[128], int dev) {
   dp->name[0] = '.';
   // make .. entry: pino=parent DIR ino, blk=allocated block
   dp = (DIR *)((char *)dp + 12);
-  int pino = findino(mip, &ino);
-  dp->inode = pino;
+  dp->inode = pmip->ino;
   dp->rec_len = BLKSIZE-12; // rec_len spans block
   dp->name_len = 2;
   dp->name[0] = dp->name[1] = '.';
-  put_block(dev, blk, buf); // write to blk on diks
+  put_block(dev, bno, buf); // write to blk on diks
   // write to disk block blk.
   
   // (4).4. enter_child(pmip, ino, basename); which enters (ino, basename) as a dir_entry to the parent INODE;
@@ -183,16 +239,21 @@ int mymkdir(char pathname[128]) {
 
     // (2). // dirname must exist and is a DIR:
     int pino = getino(dname);
+    if (pino == 0) {
+      printf("parent %s doesn't exist", dname);
+      return 0;
+    }
+
     MINODE * pmip = iget(dev, pino);
     //check pmip->INODE is a DIR
     if (!S_ISDIR(pmip->INODE.i_mode)) {
-      printf("mip->INODE is not a DIR\n");
+      printf("mip->INODE %s is not a DIR\n", dname);
       return 0;
     }
     // (3). // basename must not exist in parent DIR:
     int s = search(pmip, bname); //must return 0;
     if (s != 0) {
-      printf("search returned non-zero number %d\n", s);
+      printf("search for %s returned non-zero number %d, so it already exists underneath %s\n", bname, s, dname);
       return 0;
     }
 
