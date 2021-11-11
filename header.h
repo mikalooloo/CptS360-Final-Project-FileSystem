@@ -20,5 +20,6 @@ int quit();
 int mymkdir(char pathname[128]);
 int mycreat(char pathname[128]);
 int myrmdir(char pathname[128]);
+int my_link(char *pathname);
 
 #endif
