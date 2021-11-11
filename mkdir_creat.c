@@ -230,7 +230,7 @@ int mymkdir(char pathname[128]) {
 
     // (2). // dirname must exist and is a DIR:
     int pino = getino(dname);
-    if (pino == 0) {
+    if (pino == -1) {
       printf("parent %s doesn't exist", dname);
       return 0;
     }
