@@ -19,5 +19,6 @@ char *pwd(MINODE *wd);
 int quit();
 int mymkdir(char pathname[128]);
 int mycreat(char pathname[128]);
+int myrmdir(char pathname[128]);
 
 #endif
