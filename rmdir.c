@@ -76,20 +76,78 @@ int bdalloc(int dev, int bno)
 
 int rm_child(MINODE * pmip, char *name) 
 {
+    char buf[BLKSIZE];
+    DIR * dp, * pdp; // directory pointer and previous directory pointer
+    char * cp;
     // (1). Search parent INODE’s data block(s) for the entry of name
+    for (int i = 0; i < 12; ++i) {
+        if (pmip->INODE.i_block[i] == 0) break;
 
-    // (2). Delete name entry from parent directory by
-    // (2).1. if (first and only entry in a data block)
-        // deallocate the data block; reduce parent’s file size by BLKSIZE;
-        // compact parent’s i_block[ ] array to eliminate the deleted entry if it’s
-        // between nonzero entries.
-    // (2).2. else if LAST entry in block{
-        // Absorb its rec_len to the predecessor entry
-    // (2).3. else: entry is first but not the only entry or in the middle of a block:
-        // move all trailing entries LEFT to overlay the deleted entry;
-        // add deleted rec_len to the LAST entry; do not change parent’s file
-        // size;
-        // How to move trailing entries LEFT? Hint: memcpy(dp, cp, size);
+        get_block(pmip->dev, pmip->INODE.i_block[i], buf);
+        dp = (DIR *)buf;
+        cp = buf;
+
+        while (cp < buf + BLKSIZE) {
+            // (2). Delete name entry from parent directory by
+            if (strcmp(name, dp->name) == 0) // found the name in the block
+            {
+                // (2).1. if (first and only entry in a data block)
+                if (cp == buf && (cp + dp->rec_len) == (buf + BLKSIZE))
+                {
+                    // deallocate the data block; reduce parent’s file size by BLKSIZE;
+                    bdalloc(pmip->dev, pmip->INODE.i_block[i]);
+                    pmip->INODE.i_size -= BLKSIZE;
+                    // compact parent’s i_block[ ] array to eliminate the deleted entry if it’s between nonzero entries.
+                    for (int y = i; y < 12; ++y) {
+                        if (pmip->INODE.i_block[y+1] == 0) break; // if it's the last nonzero block
+                        get_block(pmip->dev, pmip->INODE.i_block[y+1], buf);
+                        put_block(pmip->dev, pmip->INODE.i_block[y], buf);
+                    }
+                }
+                // (2).2. else if LAST entry in block{
+                else if ((cp + dp->rec_len) == buf + BLKSIZE) 
+                {
+                    // Absorb its rec_len to the predecessor entry
+                    pdp->rec_len += dp->rec_len;
+                    put_block(pmip->dev, pmip->INODE.i_block[i], buf);
+                }
+                // (2).3. else: entry is first but not the only entry or in the middle of a block:
+                else 
+                {
+                    DIR * dp2 = (DIR *)buf;
+                    char * cp2 = buf;
+
+                    // going to last entry
+                    while (cp2 + dp2->rec_len < buf + BLKSIZE) {
+                        cp2 += dp2->rec_len;
+                        dp2 = (DIR *)cp2;
+                    }
+
+                    // absorbing size
+                    dp2->rec_len += dp->rec_len;
+
+                    // move all trailing entries LEFT to overlay the deleted entry;
+                    cp += dp->rec_len;
+                    int size = (buf + BLKSIZE) - cp;
+                    // How to move trailing entries LEFT? Hint: memcpy(dp, cp, size);
+                    memcpy(dp, cp, size);
+                    // add deleted rec_len to the LAST entry; do not change parent’s file size;
+                    put_block(pmip->dev, pmip->INODE.i_block[i], buf);
+                }
+                
+                // found the name and did the appropiate rm action
+                return 0;
+            }
+          
+            // still searching for name
+            pdp = dp;
+            cp += dp->rec_len;
+            dp = (DIR *)cp;
+        }
+    }
+    // did not find name
+    printf("did not find child %s to remove\n", name);
+    return -1;
 }
 
 
@@ -141,6 +199,8 @@ int myrmdir(char pathname[128]) {
     // (5). remove name from parent directory */
     rm_child(pmip, pathname);
     // (6). dec parent links_count by 1; mark parent pimp dirty;
+    pmip->INODE.i_links_count -= 1;
+    pmip->dirty = 1;
     iput(pmip);
     // (7). /* deallocate its data blocks and inode */
     bdalloc(mip->dev, mip->INODE.i_block[0]);
