@@ -100,7 +100,7 @@ int enter_name(MINODE * pip, int ino, char * name) {
       blk = pip->INODE.i_block[i];
 
     // (1). Get parent’s data block into a buf[ ];
-    get_block(pip->dev, pip->INODE.i_block[i], buf);
+    get_block(pip->dev, blk, buf);
     dp = (DIR *)buf;
     cp = buf;
 
@@ -137,7 +137,7 @@ int enter_name(MINODE * pip, int ino, char * name) {
       strcpy(dp->name, name);
       dp->name_len = strlen(name);
       dp->rec_len = remain;
-  
+
       put_block(dev, blk, buf);
       return 0;
     }
@@ -170,7 +170,7 @@ int kmkdir(MINODE * pmip, char basename[128], int dev) {
 
   // (4).1. Allocate an INODE and a disk block:
   int ino = ialloc(dev);
-  int bno = balloc(dev);
+  int blk = balloc(dev);
 
   // (4).2. mip = iget(dev, ino) // load INODE into a minode
   //initialize mip->INODE as a DIR INODE;
@@ -184,7 +184,7 @@ int kmkdir(MINODE * pmip, char basename[128], int dev) {
     ip->i_links_count = 2, // links count=2 because of . and ..
     ip->i_atime = ip->i_ctime = ip->i_mtime = time(0L),
     ip->i_blocks = 2, // LINUX: Blocks count in 512-byte chunks
-    ip->i_block[0] = bno // new DIR has one data block
+    ip->i_block[0] = blk // new DIR has one data block
   };*/
   ip->i_mode = 0x41ED; // 040755: DIR type and permissions
   ip->i_uid = running->uid; // owner uid
@@ -193,17 +193,18 @@ int kmkdir(MINODE * pmip, char basename[128], int dev) {
   ip->i_links_count = 2; // links count=2 because of . and ..
   ip->i_atime = ip->i_ctime = ip->i_mtime = time(0L);
   ip->i_blocks = 2; // LINUX: Blocks count in 512-byte chunks
-  ip->i_block[0] = bno;
+  ip->i_block[0] = blk;
   for (int i = 1; i < 15; ++i) {
     ip->i_block[i] = 0;
   }
   mip->dirty = 1; // mark minode dirty
   iput(mip); // write INODE to disk
-  
+
   //(4).3. make data block 0 of INODE to contain . and .. entries;
   char buf[BLKSIZE];
   bzero(buf, BLKSIZE); // optional: clear buf[ ] to 0
-  get_block(dev, bno, buf);
+
+  get_block(dev, blk, buf);
   DIR *dp = (DIR *)buf;
   // make . entry
   dp->inode = ino;
@@ -216,7 +217,7 @@ int kmkdir(MINODE * pmip, char basename[128], int dev) {
   dp->rec_len = BLKSIZE-12; // rec_len spans block
   dp->name_len = 2;
   dp->name[0] = dp->name[1] = '.';
-  put_block(dev, bno, buf); // write to blk on diks
+  put_block(dev, blk, buf); // write to blk on diks
   // write to disk block blk.
   
   // (4).4. enter_child(pmip, ino, basename); which enters (ino, basename) as a dir_entry to the parent INODE;
