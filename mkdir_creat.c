@@ -89,7 +89,7 @@ int enter_name(MINODE * pip, int ino, char * name) {
   char buf[BLKSIZE];
   int blk;
 
-  int ideal_length = 0, need_length = 0;
+  int ideal_length = 0, need_length = 4* ((8 + strlen(name) + 3)/4);
   
   // assume only 12 direct blocks,
   // for each data block of parent DIR
@@ -106,12 +106,12 @@ int enter_name(MINODE * pip, int ino, char * name) {
 
 
     // (2). In a data block of the parent directory, each dir_entry has an ideal length
-    ideal_length = 4 * ((8 + dp->name_len + 3)/4); // a multiple of 4
+    //ideal_length = 4 * ((8 + dp->name_len + 3)/4); // a multiple of 4
     // All dir_entires rec_len = ideal_length except the last entry
     // The rec_len of the last entry is to the end of the block, which may be larger than ideal_length
 
     // (3). In order to enter a new entry of name with n_len, the needed length is
-    need_length = 4* ((8 + strlen(name) + 3)/4); // a multiple of 4
+    //need_length = 4* ((8 + strlen(name) + 3)/4); // a multiple of 4
 
     // (4). Step to the last entry in the data block:
     get_block(pip->dev, pip->INODE.i_block[i], buf);
@@ -133,10 +133,10 @@ int enter_name(MINODE * pip, int ino, char * name) {
       cp += dp->rec_len;
       dp = (DIR *)cp;
 
-      dp->inode = ino;
-      strcpy(dp->name, name);
-      dp->name_len = strlen(name);
-      dp->rec_len = remain;
+      dp->inode = ino; // setting ino
+      dp->rec_len = remain; // setting rec_len
+      dp->name_len = strlen(name); // setting name_len
+      strcpy(dp->name, name); // setting name
 
       put_block(dev, blk, buf);
       return 0;
@@ -153,11 +153,11 @@ int enter_name(MINODE * pip, int ino, char * name) {
       dp = (DIR *)buf;
       cp = buf;
 
-      dp->name_len = strlen(name);
-      strcpy(dp->name, name);
-      dp->inode = ino;
-      dp->rec_len = BLKSIZE;
-
+      dp->inode = ino; // setting ino
+      dp->rec_len = BLKSIZE; // setting rec_len
+      dp->name_len = strlen(name); // setting name_len
+      strcpy(dp->name, name); // setting name
+      
       put_block(dev, blk, buf);
       return 1;
     }
