@@ -2,6 +2,7 @@
 
 #include "header.h"
 
+extern int dev;
 extern char * totalPath();
 
 //link function, cmd: link old_fle new_file
