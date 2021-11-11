@@ -22,4 +22,7 @@ int mycreat(char pathname[128]);
 int myrmdir(char pathname[128]);
 int my_link(char *pathname);
 
+int enter_name(MINODE * pip, int ino, char * name);
+int balloc(int dev);
+
 #endif

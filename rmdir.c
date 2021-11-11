@@ -39,7 +39,7 @@ int idalloc(int dev, int ino)
         // MTABLE *mp = (MTABLE *)get_mtable(dev);
     if (ino > ninodes){  
         printf("inumber %d out of range\n", ino);
-        return;
+        return -1;
     }
     
     get_block(dev, imap, buf);  // get inode bitmap block into buf[]
@@ -49,6 +49,8 @@ int idalloc(int dev, int ino)
     put_block(dev, imap, buf);  // write buf back
     // update free inode count in SUPER and GD
     incFreeInodes(dev);
+
+    return 0;
 }
 
 int bdalloc(int dev, int bno) 
@@ -58,7 +60,7 @@ int bdalloc(int dev, int bno)
     // MTABLE *mp = (MTABLE *)get_mtable(dev);
     if (bno > nblocks){  
         printf("inumber %d out of range\n", bno);
-        return;
+        return -1; 
     }
     
     get_block(dev, bmap, buf);  // get inode bitmap block into buf[]
@@ -68,6 +70,8 @@ int bdalloc(int dev, int bno)
     put_block(dev, bmap, buf);  // write buf back
     // update free inode count in SUPER and GD
     incFreeBlocks(dev);
+
+    return 0;
 }
 
 int rm_child(MINODE * pmip, char *name) 
@@ -100,7 +104,7 @@ int myrmdir(char pathname[128]) {
     }
     MINODE * mip = iget(dev, ino);
     // (2). verify INODE is a DIR (by INODE.i_mode field);
-    if (!IS_ISDIR(mip->INODE.i_mode)) {
+    if (!S_ISDIR(mip->INODE.i_mode)) {
         printf("INODE is not a DIR\n");
         return -1;
     }
@@ -130,10 +134,10 @@ int myrmdir(char pathname[128]) {
         }
     }
     // (3). /* get parent’s ino and inode */
-    int pino = findino(mip, ino); //get pino from .. entry in INODE.i_block[0]
+    int pino = findino(mip, &ino); //get pino from .. entry in INODE.i_block[0]
     MINODE * pmip = iget(mip->dev, pino);
     // (4). /* get name from parent DIR’s data block */
-    findname(pmip, ino, pathname); //find name from parent DIR
+    findmyname(pmip, ino, pathname); //find name from parent DIR
     // (5). remove name from parent directory */
     rm_child(pmip, pathname);
     // (6). dec parent links_count by 1; mark parent pimp dirty;
