@@ -161,7 +161,7 @@ int search(MINODE *mip, char *name)
      cp += dp->rec_len;
      dp = (DIR *)cp;
    }
-   return 0;
+   return -1;
 }
 
 int getino(char *pathname)
@@ -237,7 +237,7 @@ int findmyname(MINODE *parent, u32 myino, char myname[ ])
             //dp->inode, dp->rec_len, dp->name_len, dp->name);
          if (dp->inode == myino){
          //if (!strcmp(temp, myname)) {
-            printf("found %s : ino = %d\n\n", temp, dp->inode);
+            printf("found %s : ino = %d\n", temp, dp->inode);
             strncpy(myname, dp->name, dp->name_len);
              myname[dp->name_len] = 0;
             return 1;
@@ -259,8 +259,6 @@ int findino(MINODE *mip, u32 *myino) // myino = i# of . return i# of ..
   // WRITE your code here: myino = ino of .  return ino of ..
   // all in i_block[0] of this DIR INODE.
    DIR * dp = (DIR *) buf;
-   printf("mip: %d\n", mip->ino);
-   printf("inode: %d\n", dp->inode);
    * myino = mip->ino;
    dp = (DIR *) (buf + dp->rec_len);
    return dp->inode;

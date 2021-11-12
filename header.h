@@ -17,12 +17,12 @@ int cd(char * pathname);
 int ls(char * pathname);
 char *pwd(MINODE *wd);
 int quit();
-int mymkdir(char pathname[128]);
-int mycreat(char pathname[128]);
-int myrmdir(char pathname[128]);
+int mymkdir(char *pathname);
+int mycreat(char *pathname);
+int myrmdir(char *pathname);
 int my_link(char *pathname);
 
-int enter_name(MINODE * pip, int ino, char * name);
+int enter_name(MINODE * pip, int ino, char * basename);
 int balloc(int dev);
 char * rpwd(MINODE *wd, int print);
 
