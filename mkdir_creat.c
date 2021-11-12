@@ -58,8 +58,8 @@ int ialloc(int dev)  // allocate an inode number from inode_bitmap
     if (tst_bit(buf, i)==0){
         set_bit(buf, i);
         put_block(dev, imap, buf);
-        printf("allocated ino = %d\n", i+1); // bits count from 0; ino from 1
         decFreeInodes(dev);
+        printf("allocated ino = %d\n", i+1); // bits count from 0; ino from 1
         return i+1;
     }
   }
@@ -76,8 +76,8 @@ int balloc(int dev)
     if (tst_bit(buf, i) == 0) {
       set_bit(buf, i);
       put_block(dev, bmap, buf);
-      printf("allocated blk = %d\n", i+1);
       decFreeBlocks(dev);
+      printf("allocated blk = %d\n", i+1);
       return i + 1;
     }
   }
@@ -104,7 +104,6 @@ int enter_name(MINODE * pip, int ino, char * name) {
     get_block(pip->dev, blk, buf);
     dp = (DIR *)buf;
     cp = buf;
-
 
     // (2). In a data block of the parent directory, each dir_entry has an ideal length
     //ideal_length = 4 * ((8 + dp->name_len + 3)/4); // a multiple of 4
@@ -136,7 +135,7 @@ int enter_name(MINODE * pip, int ino, char * name) {
       dp->rec_len = remain; // setting rec_len
       dp->name_len = strlen(name); // setting name_len
       strcpy(dp->name, name); // setting name
-
+      
       put_block(dev, blk, buf);
       return 0;
     }
@@ -164,7 +163,7 @@ int enter_name(MINODE * pip, int ino, char * name) {
 
 }
 
-int kmkdir(MINODE * pmip, char basename[128]) {
+int kmkdir(MINODE * pmip, char * basename) {
   // kmkdir() consists of 4 major steps:
 
   // (4).1. Allocate an INODE and a disk block:
@@ -217,18 +216,16 @@ int kmkdir(MINODE * pmip, char basename[128]) {
   enter_name(pmip, ino, basename);
 }
 
-int mymkdir(char pathname[128]) {
+int mymkdir(char * pathname) {
     // (1). divide pathname into dirname and basename, e.g. pathname=/a/b/c, then dirname=/a/b; basename=c;
     char dname[128] = "", bname[128];
     int n = (tokenize(pathname) - 1);
     int i;
-    int absolute;
 
     for (i = 0; i < n; ++i) {
       strcat(dname, "/");
       strcat(dname, name[i]);
     }
-
     strcpy(bname, name[i]);
 
     if (pathname[0] == '/') { // if absolute
@@ -246,7 +243,7 @@ int mymkdir(char pathname[128]) {
     // (2). // dirname must exist and is a DIR:
     int pino = getino(dname);
     if (pino == -1) {
-      printf("\nparent %s doesn't exist: mkdir failed\n", dname);
+      printf("\nparent %s does not exist: mkdir failed\n", dname);
       return -1;
     }
     else printf("parent %s exists: passed parent check\n", dname);
@@ -260,8 +257,8 @@ int mymkdir(char pathname[128]) {
     else printf("%s is a DIR: passed DIR check\n", dname);
 
     // (3). // basename must not exist in parent DIR:
-    int s = search(pmip, bname); //must return 0;
-    if (s != 0) {
+    int s = search(pmip, bname); //must return -1;
+    if (s != -1) {
       printf("\n%s already exists under %s: mkdir failed\n", bname, dname);
       return -1;
     }
@@ -277,7 +274,7 @@ int mymkdir(char pathname[128]) {
     printf("\nmkdir successful\n");
 }
 
-int kcreat(MINODE * pmip, char basename[128]) {
+int kcreat(MINODE * pmip, char * basename) {
   // (4).1. Allocate an INODE:
   int ino = ialloc(dev);
 
@@ -303,22 +300,21 @@ int kcreat(MINODE * pmip, char basename[128]) {
   enter_name(pmip, ino, basename);
 }
 
-int mycreat(char pathname[128]) {
+int mycreat(char * pathname) {
   // (1). divide pathname into dirname and basename, e.g. pathname=/a/b/c, then dirname=/a/b; basename=c;
     char dname[128] = "", bname[128];
-    int n = tokenize(pathname);
+    int n = (tokenize(pathname) - 1);
     int i;
 
-    for (i = 0; i < (n-1); ++i) {
+    for (i = 0; i < n; ++i) {
       strcat(dname, "/");
       strcat(dname, name[i]);
     }
-    
     strcpy(bname, name[i]);
 
     if (pathname[0] == '/') { // if absolute
       printf("creat name %s is absolute\n", bname);
-      if (i == 0) strcat(dname, "/");
+      if (i == 0) strcpy(dname, "/");
     }
     else { // if relative
       printf("creat name %s is relative\n", bname);
@@ -330,8 +326,8 @@ int mycreat(char pathname[128]) {
 
     // (2). // dirname must exist and is a DIR:
     int pino = getino(dname);
-    if (pino == 0) {
-      printf("\nparent %s doesn't exist: creat failed\n", dname);
+    if (pino == -1) {
+      printf("\nparent %s does not exist: creat failed\n", dname);
       return 0;
     }
     else printf("parent %s exists: passed parent check\n", dname);
@@ -345,17 +341,17 @@ int mycreat(char pathname[128]) {
     else printf("%s is a DIR: passed DIR check\n", dname);
 
     // (3). // basename must not exist in parent DIR:
-    int s = search(pmip, bname); //must return 0;
-    if (s != 0) {
+    int s = search(pmip, bname); //must return -1;
+    if (s != -1) {
       printf("\n%s already exists under %s: creat failed\n", bname, dname);
-      return 0;
+      return -1;
     }
     else printf("%s does not exist under %s yet: passed new file check\n", bname, dname);
 
     // (4). call kmkdir(pmip, basename) to create a DIR;
     kcreat(pmip, bname);
     
-    // (5). increment parent INODE’s links_count by 1 and mark pmip dirty;
+    // (5). mark pmip dirty;
     pmip->dirty = 1;
     iput(pmip);
 

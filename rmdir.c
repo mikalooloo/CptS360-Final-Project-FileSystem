@@ -1,6 +1,8 @@
 #include "header.h"
 
 extern int dev, ninodes, imap, bmap, nblocks;
+extern PROC   proc[NPROC], *running;
+extern char * name[64];
 
 int clr_bit(char *buf, int bit) // clear bit in char buf[BLKSIZE]
 { buf[bit/8] &= ~(1 << (bit%8)); }
@@ -74,7 +76,7 @@ int bdalloc(int dev, int bno)
     return 0;
 }
 
-int rm_child(MINODE * pmip, char *name) 
+int rm_child(MINODE * pmip, char *rname) 
 {
     char buf[BLKSIZE];
     DIR * dp, * pdp; // directory pointer and previous directory pointer
@@ -86,11 +88,15 @@ int rm_child(MINODE * pmip, char *name)
         get_block(pmip->dev, pmip->INODE.i_block[i], buf);
         dp = (DIR *)buf;
         cp = buf;
-
+        printf("looking for %s...\n", rname);
+        char temp[64];
         while (cp < buf + BLKSIZE) {
             // (2). Delete name entry from parent directory by
-            if (strcmp(name, dp->name) == 0) // found the name in the block
+            memset(temp, 0, 64);
+            strncpy(temp, dp->name, dp->name_len);
+            if (strcmp(rname, temp) == 0) // found the name in the block
             {
+                printf("found child %s\n", rname);
                 // (2).1. if (first and only entry in a data block)
                 if (cp == buf && (cp + dp->rec_len) == (buf + BLKSIZE))
                 {
@@ -100,8 +106,8 @@ int rm_child(MINODE * pmip, char *name)
                     // compact parent’s i_block[ ] array to eliminate the deleted entry if it’s between nonzero entries.
                     for (int y = i; y < 12; ++y) {
                         if (pmip->INODE.i_block[y+1] == 0) break; // if it's the last nonzero block
-                        get_block(pmip->dev, pmip->INODE.i_block[y+1], buf);
-                        put_block(pmip->dev, pmip->INODE.i_block[y], buf);
+                        get_block(pmip->dev, pmip->INODE.i_block[y], buf);
+                        put_block(pmip->dev, pmip->INODE.i_block[y-1], buf);
                     }
                 }
                 // (2).2. else if LAST entry in block{
@@ -136,7 +142,7 @@ int rm_child(MINODE * pmip, char *name)
                 }
                 
                 // found the name and did the appropiate rm action
-                printf("removed child %s: passed rm_child()\n", name);
+                printf("removed child %s: passed rm_child()\n", rname);
                 return 0;
             }
           
@@ -147,20 +153,22 @@ int rm_child(MINODE * pmip, char *name)
         }
     }
     // did not find name
-    printf("\ndid not find child %s to remove: rmdir failed\n", name);
+    printf("\ndid not find child %s to remove: rmdir failed\n", rname);
     return -1;
 }
 
 
-int myrmdir(char pathname[128]) {
-    char * cp, buf[BLKSIZE];
-    
+int myrmdir(char * pathname) {
+    char * cp, buf[BLKSIZE]; 
+
     // (1). get in-memory INODE of pathname:
     int ino = getino(pathname);
     if (ino == -1) {
-        printf("\nino %d does not exist: rmdir failed\n", ino);
+        printf("\n%s does not exist: rmdir failed\n", pathname);
         return -1;
     }
+    else printf("parent %s exists: passed check\n", pathname);
+
     MINODE * mip = iget(dev, ino);
     // (2). verify INODE is a DIR (by INODE.i_mode field);
     if (!S_ISDIR(mip->INODE.i_mode)) {
@@ -206,7 +214,7 @@ int myrmdir(char pathname[128]) {
     findmyname(pmip, ino, pathname); //find name from parent DIR
     // (5). remove name from parent directory */
     int rm_check = rm_child(pmip, pathname);
-    if (rm_check == -1) return -1;
+    if (rm_check == -1) { iput(pmip); iput(mip); return -1; }
     // (6). dec parent links_count by 1; mark parent pimp dirty;
     pmip->INODE.i_links_count -= 1;
     pmip->dirty = 1;
