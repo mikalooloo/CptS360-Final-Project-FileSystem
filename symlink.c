@@ -49,3 +49,13 @@ int symlnk(char *old_file, char *new_file)
 
 	put_block(dev, blk, buf);
 }
+
+//readLink function reads the target file name of a symbolic file and returns the length of the target 
+//file name
+int readLink(char *file, char *buffer)
+{
+	char buf[1024];
+	//(1). get file's INODE in memory; verify its a link file
+	//(2). copy target filename from INODE.i_block() into buffer
+	//(3). return file size
+}
