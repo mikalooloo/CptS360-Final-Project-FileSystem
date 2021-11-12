@@ -60,6 +60,7 @@ int symlink(char *old_file, char *new_file)
 	mip->INODE.i_size = strlen(old_file); 
 	iput(mip);
 
+	printf("\nsymlink successful\n");
 	return 0;
 }
 

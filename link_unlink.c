@@ -146,8 +146,8 @@ int my_unlink(char *filename)
 	char buf[1024];
 	//int dev = 0;
 	
-	char parent[128];
-	char child[128];
+	char parent[128] = "";
+	char child[128] = "";
 	
     int n = (tokenize(filename) - 1);
     int i;
