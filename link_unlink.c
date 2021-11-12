@@ -129,4 +129,84 @@ int my_link(char *pathname)
 }
 
 
-//
+//my_unlink function to unlink a file, command: unlink filename
+//decrements file's link_count by 1 and deletes the file name from its parent DIR
+//when file's links_count reaches 0, the file is truly removed by deallocating its data blocks and inode
+int my_unlink(char *filename)
+{
+	//check if filename is empty, if so return 0
+	if(strlen(filename) == 0)
+	{
+		return 0;
+	}
+
+	//var initialization
+	char buf[1024];
+	//int dev = 0;
+	
+	//(1). get filename's minode
+	int ino = getino(filename);
+	int mip = iget(dev, ino);
+
+	//check if it exists
+	if(ino == 0)
+	{
+		printf("Attention: filename, %s, does not exist!\n", filename);
+		return;
+	}
+	
+	int blk = (ino - 1)/8; //CHECK IF RIGHT 
+	int offset = (ino - 1) % 8;
+
+	get_block(dev, blk, buf);
+
+	INODE *mip = (INODE*)buf + offset;
+
+	//check if a REG or symbolic LNK file; can not be a DIR
+	if(S_ISDIR(mip->i_mode))
+	{
+		printf("Attention: Cannot unlink!\n");
+		return;
+	}
+
+	//(2). remove name entry from parent DIR's data block
+	char parent = dirname(filename);
+	char child = basename(filename);
+
+	int pino = getino(parent);
+	int pmip = iget(dev, pino);
+
+	rm_child(pmip, ino, child);
+	pmip->dirty = 1; //ERROR: CHECK TYPE
+
+	iput(pmip);
+
+	//(3). decrement INODE's link_count by 1
+	mip->INODE.i_links_count--;
+	
+	//(4).
+	if(mip->INODE.i_links_count > 0)
+	{
+		mip->dirty = 1; //for write INODE back to disk
+	}
+
+	//(5).
+	else
+	{
+		//if links_count = 0: remove filename
+		//deallocate all data blocks in INODE
+		//deallocate INODE;
+		
+	}
+	//release mip
+	iput(mip);
+}
+
+
+
+
+
+
+
+
+
