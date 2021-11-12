@@ -4,6 +4,17 @@
 
 extern char * totalPath();
 
+//trunctate function
+INODE *truncate_ino(INODE *i)
+{
+	for(int j = 0; j < 15; j++)
+	{
+		i->i_block[j] = 0;
+	}
+	return i;
+}
+
+
 //link function, cmd: link old_fle new_file
 int my_link(char *pathname)
 {
@@ -116,4 +127,4 @@ int my_link(char *pathname)
 }
 
 
-
+//
