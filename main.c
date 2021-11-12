@@ -104,7 +104,7 @@ int main(int argc, char *argv[ ])
     pathname[0] = 0;
 
     sscanf(line, "%s %s", cmd, pathname);
-    printf("cmd=%s pathname=%s\n", cmd, pathname);
+    printf("\ncmd=%s pathname=%s\n", cmd, pathname);
   
     if (strcmp(cmd, "ls")==0)
        ls(pathname);
