@@ -15,7 +15,7 @@ int   n;         // number of component strings
 
 int fd, dev;
 int nblocks, ninodes, bmap, imap, iblk;
-char line[128], cmd[32], pathname[128];
+char line[128], cmd[32], pathname[128], pathname2[128];
 
 int init()
 {
@@ -95,7 +95,7 @@ int main(int argc, char *argv[ ])
   // WRTIE code here to create P1 as a USER process
   
   while(1){
-    printf("\ninput command : [ls|cd|pwd|mkdir|creat|rmdir|link|quit] ");
+    printf("\n[ls|cd|pwd|mkdir|creat|rmdir|link|unlink|symlink|quit]\ninput command :  ");
     fgets(line, 128, stdin);
     line[strlen(line)-1] = 0;
 
@@ -118,8 +118,14 @@ int main(int argc, char *argv[ ])
       mycreat(pathname);
     else if (strcmp(cmd, "rmdir")==0)
       myrmdir(pathname);
-    else if (strcmp(cmd, "link")==0)
-      my_link(pathname);
+    else if (strcmp(cmd, "link")==0) {
+      sscanf(line, "%s %s %s", cmd, pathname, pathname2);
+      my_link(pathname, pathname2); }
+    else if (strcmp(cmd, "unlink")==0)
+      my_unlink(pathname);
+    else if (strcmp(cmd, "symlink")==0) {
+      sscanf(line, "%s %s %s", cmd, pathname, pathname2);
+      symlink(pathname, pathname2); }
     else if (strcmp(cmd, "quit")==0)
        quit();
   }

@@ -20,9 +20,12 @@ int quit();
 int mymkdir(char *pathname);
 int mycreat(char *pathname);
 int myrmdir(char *pathname);
-int my_link(char *pathname);
+int my_link(char *old_file, char *new_file);
+int my_unlink(char *filename);
+int symlink(char *old_file, char *new_file);
 
 int enter_name(MINODE * pip, int ino, char * basename);
+int rm_child(MINODE * pmip, char *rname);
 int balloc(int dev);
 char * rpwd(MINODE *wd, int print);
 
