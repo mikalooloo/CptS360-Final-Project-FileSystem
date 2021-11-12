@@ -155,7 +155,7 @@ int search(MINODE *mip, char *name)
      printf("%4d  %4d  %4d    %s\n", 
            dp->inode, dp->rec_len, dp->name_len, dp->name);
      if (strcmp(temp, name)==0){
-        printf("found %s : ino = %d\n\n", temp, dp->inode);
+        printf("found %s : ino = %d\n", temp, dp->inode);
         return dp->inode;
      }
      cp += dp->rec_len;
@@ -193,7 +193,7 @@ int getino(char *pathname)
 
       if (ino==0){
          iput(mip);
-         printf("name %s does not exist\n", name[i]);
+         printf("\nname %s does not exist: getino failed\n", name[i]);
          return -1;
       }
       iput(mip);
@@ -217,7 +217,7 @@ int findmyname(MINODE *parent, u32 myino, char myname[ ])
    DIR *dp;
    INODE *ip;
 
-   printf("search for %s in MINODE = [%d, %d]\n", myname, parent->dev, parent->ino);
+   printf("search for %d in MINODE = [%d, %d]\n", myino, parent->dev, parent->ino);
    ip = &(parent->INODE);
 
    /*** search for name in mip's data blocks:  ***/
@@ -254,12 +254,14 @@ int findino(MINODE *mip, u32 *myino) // myino = i# of . return i# of ..
 {
   // mip points at a DIR minode
   char buf[BLKSIZE];
-  get_block(mip->dev, mip->INODE.i_block[0], buf);
+  get_block(dev, mip->INODE.i_block[0], buf);
 
   // WRITE your code here: myino = ino of .  return ino of ..
   // all in i_block[0] of this DIR INODE.
    DIR * dp = (DIR *) buf;
-   * myino = dp->inode;
+   printf("mip: %d\n", mip->ino);
+   printf("inode: %d\n", dp->inode);
+   * myino = mip->ino;
    dp = (DIR *) (buf + dp->rec_len);
    return dp->inode;
 }

@@ -38,7 +38,7 @@ int idalloc(int dev, int ino)
     char buf[BLKSIZE];
         // MTABLE *mp = (MTABLE *)get_mtable(dev);
     if (ino > ninodes){  
-        printf("inumber %d out of range\n", ino);
+        printf("\ninumber %d out of range: idalloc failed\n", ino);
         return -1;
     }
     
@@ -59,7 +59,7 @@ int bdalloc(int dev, int bno)
     char buf[BLKSIZE];
     // MTABLE *mp = (MTABLE *)get_mtable(dev);
     if (bno > nblocks){  
-        printf("inumber %d out of range\n", bno);
+        printf("\ninumber %d out of range: bdalloc failed\n", bno);
         return -1; 
     }
     
@@ -136,6 +136,7 @@ int rm_child(MINODE * pmip, char *name)
                 }
                 
                 // found the name and did the appropiate rm action
+                printf("removed child %s: passed rm_child()\n", name);
                 return 0;
             }
           
@@ -146,7 +147,7 @@ int rm_child(MINODE * pmip, char *name)
         }
     }
     // did not find name
-    printf("did not find child %s to remove\n", name);
+    printf("\ndid not find child %s to remove: rmdir failed\n", name);
     return -1;
 }
 
@@ -157,26 +158,32 @@ int myrmdir(char pathname[128]) {
     // (1). get in-memory INODE of pathname:
     int ino = getino(pathname);
     if (ino == -1) {
-        printf("ino %d does not exist\n", ino);
+        printf("\nino %d does not exist: rmdir failed\n", ino);
         return -1;
     }
     MINODE * mip = iget(dev, ino);
     // (2). verify INODE is a DIR (by INODE.i_mode field);
     if (!S_ISDIR(mip->INODE.i_mode)) {
-        printf("INODE is not a DIR\n");
+        printf("\n%s is not a DIR: rmdir failed\n", pathname);
         return -1;
     }
+    else printf("%s is a DIR: passed DIR check\n", pathname);
+
     // minode is not BUSY (refCount = 1);
     if (mip->refCount != 1) {
-        printf("minode is busy as refCount is %d\n", mip->refCount);
+        printf("\nminode is busy as refCount is %d: rmdir failed\n", mip->refCount);
         return -1;
     }
+    else printf("minode is not busy: passed busy check\n");
+
     // verify DIR is empty (traverse data blocks for number of entries = 2);
     if (mip->INODE.i_links_count > 2) {
-        printf("DIR %s has other dirs inside; cannot rmdir %s\n", pathname, pathname);
+        printf("\nDIR %s has other dirs inside: rmdir failed\n", pathname);
         return -1;
     }
-    else if (mip->INODE.i_links_count == 2) { // only has . and ..
+    else printf("DIR %s has no dirs inside: passed dirs check\n", pathname);
+    
+    if (mip->INODE.i_links_count == 2) { // only has . and ..
         get_block(mip->dev, mip->INODE.i_block[0], buf);
         dp = (DIR *)buf;
         cp = buf;
@@ -187,9 +194,10 @@ int myrmdir(char pathname[128]) {
             dp = (DIR *)cp;
         }
         if (count > 2) {
-            printf("DIR %s has files inside; cannot rmdir %s\n", pathname, pathname);
+            printf("\nDIR %s has files inside: rmdir failed\n", pathname);
             return -1;
         }
+        else printf("DIR %s has no files inside: passed files check\n", pathname);
     }
     // (3). /* get parent’s ino and inode */
     int pino = findino(mip, &ino); //get pino from .. entry in INODE.i_block[0]
@@ -197,7 +205,8 @@ int myrmdir(char pathname[128]) {
     // (4). /* get name from parent DIR’s data block */
     findmyname(pmip, ino, pathname); //find name from parent DIR
     // (5). remove name from parent directory */
-    rm_child(pmip, pathname);
+    int rm_check = rm_child(pmip, pathname);
+    if (rm_check == -1) return -1;
     // (6). dec parent links_count by 1; mark parent pimp dirty;
     pmip->INODE.i_links_count -= 1;
     pmip->dirty = 1;
@@ -206,4 +215,6 @@ int myrmdir(char pathname[128]) {
     bdalloc(mip->dev, mip->INODE.i_block[0]);
     idalloc(mip->dev, mip->ino);
     iput(mip);
+
+    printf("\nrmdir successful\n");
 }

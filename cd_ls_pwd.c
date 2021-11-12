@@ -16,7 +16,7 @@ int cd(char * pathname)
   // (1). int ino = getino(pathname); // return error if ino==-1
   int ino = getino(pathname);
   if (ino == -1) {
-    printf("ino for pathname %s cannot be found\n", pathname);
+    printf("\nino for pathname %s cannot be found: cd failed\n", pathname);
     return -1;
   }
 
@@ -25,16 +25,18 @@ int cd(char * pathname)
 
   // (3). Verify mip->INODE is a DIR // return error if not DIR
   if (!S_ISDIR(mip->INODE.i_mode)) {
-    printf("mip->INODE is not a DIR\n");
+    printf("\n%s is not a DIR: cd failed\n", pathname);
     return -1;
   }
-  else printf("mip->INODE is a DIR\n");
+  else printf("%s is a DIR: passed DIR check\n", pathname);
 
   // (4). iput(running->cwd); // release old cwd
   iput(running->cwd);
 
   // (5). running->cwd = mip; // change cwd to mip
   running->cwd = mip;
+
+  printf("\ncd successful\n");
   return 0;
 }
 
@@ -120,7 +122,6 @@ int ls_dir(MINODE *mip)
      cp += dp->rec_len;
      dp = (DIR *)cp;
   }
-  printf("\n");
 }
 
 int ls(char * pathname)
@@ -149,9 +150,6 @@ char * rpwd(MINODE *wd, int print) {
   }
 
   // (2). from wd->INODE.i_block[0], get my_ino and parent_ino
-  char buf[BLKSIZE];
-  get_block(dev, wd->INODE.i_block[0], buf);
-
   int my_ino;
   int parent_ino;
   parent_ino = findino(wd, &my_ino);
@@ -167,25 +165,23 @@ char * rpwd(MINODE *wd, int print) {
   char * temp = rpwd(pip, print);
   char temp2[128];
   strcpy(temp2, temp);
-  printf("my_name: %s\n", my_name);
-  printf("temp: %s\n", temp);
   pip->dirty = 1;
   iput(pip);
 
   // (6). print "/%s", my_name;
-  if (print) printf("/%s", my_name);
-  else return strcat(temp2, my_name);
+  if (print) printf("/%s", my_name); // prints cwd
+  else return strcat(temp2, my_name); // returns cwd
 }
 
 
 char *pwd(MINODE *wd)
 {
   if (wd == root) {
-    printf("\n/\n\n");
+    printf("\n/\n");
   }
   else {
     rpwd(wd, 1);
-    printf("\n\n");
+    printf("\n");
   }
 }
 
