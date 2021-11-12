@@ -2,7 +2,7 @@
 
 
 // helper functions and such
-extern int imap, bmap, ninodes, dev;
+extern int imap, bmap, nblocks, ninodes, dev;
 extern char * name[64];
 extern MINODE minode[NMINODE];
 extern PROC   proc[NPROC], *running;
@@ -72,11 +72,12 @@ int balloc(int dev)
 
   get_block(dev, bmap, buf);
 
-  for (int i = 0; i < 12; ++i) {
+  for (int i = 0; i < nblocks; ++i) {
     if (tst_bit(buf, i) == 0) {
       set_bit(buf, i);
-      decFreeBlocks(dev);
       put_block(dev, bmap, buf);
+      printf("allocated blk = %d\n", i+1);
+      decFreeBlocks(dev);
       return i + 1;
     }
   }
@@ -169,7 +170,6 @@ int kmkdir(MINODE * pmip, char basename[128]) {
   // (4).1. Allocate an INODE and a disk block:
   int ino = ialloc(dev);
   int blk = balloc(dev);
-  printf("ino: %d, blk: %d\n", ino, blk);
   
   // (4).2. mip = iget(dev, ino) // load INODE into a minode
   //initialize mip->INODE as a DIR INODE;
@@ -240,31 +240,32 @@ int mymkdir(char pathname[128]) {
       // getting cwd
       char path[128];
       strcpy(path, rpwd(running->cwd, 0));
-      printf("cwd: %s\n", path);
       strcat(dname, path);
     }
 
     // (2). // dirname must exist and is a DIR:
     int pino = getino(dname);
     if (pino == -1) {
-      printf("pino %s doesn't exist", dname);
+      printf("\nparent %s doesn't exist: mkdir failed\n", dname);
       return -1;
     }
-    printf("pino: %d\n", pino);
+    else printf("parent %s exists: passed parent check\n", dname);
+
     MINODE * pmip = iget(dev, pino);
     //check pmip->INODE is a DIR
     if (!S_ISDIR(pmip->INODE.i_mode)) {
-      printf("pmip->INODE %s is not a DIR\n", dname);
+      printf("\npmip->INODE %s is not a DIR: mkdir failed\n", dname);
       return -1;
     }
-    else printf("pmip->INODE %s is a DIR\n", dname);
+    else printf("%s is a DIR: passed DIR check\n", dname);
 
     // (3). // basename must not exist in parent DIR:
     int s = search(pmip, bname); //must return 0;
     if (s != 0) {
-      printf("search for %s returned non-zero number %d, so it already exists underneath %s\n", bname, s, dname);
+      printf("\n%s already exists under %s: mkdir failed\n", bname, dname);
       return -1;
     }
+    else printf("%s does not exist under %s yet: passed new dir check\n", bname, dname);
 
     // (4). call kmkdir(pmip, basename) to create a DIR;
     kmkdir(pmip, bname);
@@ -272,6 +273,8 @@ int mymkdir(char pathname[128]) {
     pmip->INODE.i_links_count++;
     pmip->dirty = 1;
     iput(pmip);
+
+    printf("\nmkdir successful\n");
 }
 
 int kcreat(MINODE * pmip, char basename[128]) {
@@ -310,28 +313,44 @@ int mycreat(char pathname[128]) {
       strcat(dname, "/");
       strcat(dname, name[i]);
     }
-    if (i == 0) strcat(dname, "/");
+    
     strcpy(bname, name[i]);
+
+    if (pathname[0] == '/') { // if absolute
+      printf("creat name %s is absolute\n", bname);
+      if (i == 0) strcat(dname, "/");
+    }
+    else { // if relative
+      printf("creat name %s is relative\n", bname);
+      // getting cwd
+      char path[128];
+      strcpy(path, rpwd(running->cwd, 0));
+      strcat(dname, path);
+    }
 
     // (2). // dirname must exist and is a DIR:
     int pino = getino(dname);
     if (pino == 0) {
-      printf("parent %s doesn't exist", dname);
+      printf("\nparent %s doesn't exist: creat failed\n", dname);
       return 0;
     }
+    else printf("parent %s exists: passed parent check\n", dname);
 
     MINODE * pmip = iget(dev, pino);
     //check pmip->INODE is a DIR
     if (!S_ISDIR(pmip->INODE.i_mode)) {
-      printf("mip->INODE %s is not a DIR\n", dname);
+      printf("\nmip->INODE %s is not a DIR: creat failed\n", dname);
       return 0;
     }
+    else printf("%s is a DIR: passed DIR check\n", dname);
+
     // (3). // basename must not exist in parent DIR:
     int s = search(pmip, bname); //must return 0;
     if (s != 0) {
-      printf("search for %s returned non-zero number %d, so it already exists underneath %s\n", bname, s, dname);
+      printf("\n%s already exists under %s: creat failed\n", bname, dname);
       return 0;
     }
+    else printf("%s does not exist under %s yet: passed new file check\n", bname, dname);
 
     // (4). call kmkdir(pmip, basename) to create a DIR;
     kcreat(pmip, bname);
@@ -339,4 +358,6 @@ int mycreat(char pathname[128]) {
     // (5). increment parent INODE’s links_count by 1 and mark pmip dirty;
     pmip->dirty = 1;
     iput(pmip);
+
+    printf("\ncreat successful\n");
 }
