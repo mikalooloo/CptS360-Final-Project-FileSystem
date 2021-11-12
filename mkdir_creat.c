@@ -324,9 +324,10 @@ int mycreat(char * pathname) {
       printf("creat name %s is relative\n", bname);
       // getting cwd
       char path[128];
+      strcpy(path, rpwd(running->cwd, 0));
       if (strcmp(path, "/")!=0) {
-		  strcat(path, dname);
-		  strcpy(dname, path);
+		    strcat(path, dname);
+		    strcpy(dname, path);
 	    }
       else if (strcmp(dname, "")==0) strcat(dname, "/"); // if filename is one character
     }
