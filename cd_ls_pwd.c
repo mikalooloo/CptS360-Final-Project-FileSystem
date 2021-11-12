@@ -10,14 +10,14 @@ char *t2 = "----------------";
 /************* cd_ls_pwd.c file **************/
 
 // changes cwd to pathname
-// returns 1 if successful, 0 if failed
+// returns 0 if successful, -1 if failed
 int cd(char * pathname)
 {
-  // (1). int ino = getino(pathname); // return error if ino=0
+  // (1). int ino = getino(pathname); // return error if ino==-1
   int ino = getino(pathname);
-  if (!ino) {
-    printf("ino is zero as it cannot be found\n");
-    return 0;
+  if (ino == -1) {
+    printf("\nino for pathname %s cannot be found: cd failed\n", pathname);
+    return -1;
   }
 
   // (2). MINODE *mip = iget(dev, ino);
@@ -25,15 +25,19 @@ int cd(char * pathname)
 
   // (3). Verify mip->INODE is a DIR // return error if not DIR
   if (!S_ISDIR(mip->INODE.i_mode)) {
-    printf("mip->INODE is not a DIR\n");
-    return 0;
+    printf("\n%s is not a DIR: cd failed\n", pathname);
+    return -1;
   }
+  else printf("%s is a DIR: passed DIR check\n", pathname);
+
   // (4). iput(running->cwd); // release old cwd
   iput(running->cwd);
 
   // (5). running->cwd = mip; // change cwd to mip
   running->cwd = mip;
-  return 1;
+
+  printf("\ncd successful\n");
+  return 0;
 }
 
 int ls_file(MINODE *mip, char *name)
@@ -118,7 +122,6 @@ int ls_dir(MINODE *mip)
      cp += dp->rec_len;
      dp = (DIR *)cp;
   }
-  printf("\n");
 }
 
 int ls(char * pathname)
@@ -139,16 +142,14 @@ int ls(char * pathname)
 }
 
 // recursive function for pwd
-void rpwd(MINODE *wd) {
+// if print is 1, it prints like expected for pwd. if print is 0, it returns the cwd
+char * rpwd(MINODE *wd, int print) {
   // (1). if (wd==root) return;
   if (wd == root) {
-    return;
+    return "/";
   }
 
   // (2). from wd->INODE.i_block[0], get my_ino and parent_ino
-  char buf[BLKSIZE];
-  get_block(dev, wd->INODE.i_block[0], buf);
-
   int my_ino;
   int parent_ino;
   parent_ino = findino(wd, &my_ino);
@@ -161,23 +162,26 @@ void rpwd(MINODE *wd) {
   findmyname(pip, my_ino, my_name);
 
   // (5). rpwd(pip); // recursive call rpwd(pip) with parent minode
-  rpwd(pip);
+  char * temp = rpwd(pip, print);
+  char temp2[128];
+  strcpy(temp2, temp);
   pip->dirty = 1;
   iput(pip);
 
   // (6). print "/%s", my_name;
-  printf("/%s", my_name);
+  if (print) printf("/%s", my_name); // prints cwd
+  else return strcat(temp2, my_name); // returns cwd
 }
 
 
 char *pwd(MINODE *wd)
 {
   if (wd == root) {
-    printf("\n/\n\n");
+    printf("\n/\n");
   }
   else {
-    rpwd(wd);
-    printf("\n\n");
+    rpwd(wd, 1);
+    printf("\n");
   }
 }
 

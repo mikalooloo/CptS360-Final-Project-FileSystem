@@ -2,6 +2,7 @@
 
 #include "header.h"
 
+extern int dev;
 extern char * totalPath();
 
 //trunctate function
@@ -67,7 +68,7 @@ int my_link(char *pathname)
 	}
 
 	//check if filename already used
-	oino2 = search(child, &(omip2->INODE));
+	oino2 = search(omip2, child);
 
 	if(oino2 > 0)
 	{
@@ -77,7 +78,8 @@ int my_link(char *pathname)
 		return -1;
 	}
 
-	memset(buf, 0, BLKSIZE);
+	enter_name(omip2, oino, child);
+	/* memset(buf, 0, BLKSIZE);
 	needLen = 4*((8+strlen(child)+3)/4);
 	bnum = findLastBlock(omip2);
 	//check if there is enough room
@@ -110,10 +112,10 @@ int my_link(char *pathname)
 		dp->name_len = strlen(child);
 		strncpy(dp->name, child, dp->name_len);
 		dp->rec_len = BLKSIZE;
-	}
+	} */
 
 
-	put_block(omip2->dev, bnum, buf);
+	//put_block(omip2->dev, bnum, buf);
 	
 	omip->INODE.i_links_count++;//inc INODE's links_count by 1
 
