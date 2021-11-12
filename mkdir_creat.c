@@ -218,7 +218,7 @@ int kmkdir(MINODE * pmip, char * basename) {
 
 int mymkdir(char * pathname) {
     // (1). divide pathname into dirname and basename, e.g. pathname=/a/b/c, then dirname=/a/b; basename=c;
-    char dname[128] = "", bname[128];
+    char dname[128] = "", bname[128] = "";
     int n = (tokenize(pathname) - 1);
     int i;
 
@@ -237,7 +237,11 @@ int mymkdir(char * pathname) {
       // getting cwd
       char path[128];
       strcpy(path, rpwd(running->cwd, 0));
-      strcat(dname, path);
+      if (strcmp(path, "/")!=0) {
+		  strcat(path, dname);
+		  strcpy(dname, path);
+	    }
+      else if (strcmp(dname, "")==0) strcat(dname, "/"); // if filename is one character
     }
 
     // (2). // dirname must exist and is a DIR:
@@ -320,8 +324,11 @@ int mycreat(char * pathname) {
       printf("creat name %s is relative\n", bname);
       // getting cwd
       char path[128];
-      strcpy(path, rpwd(running->cwd, 0));
-      strcat(dname, path);
+      if (strcmp(path, "/")!=0) {
+		  strcat(path, dname);
+		  strcpy(dname, path);
+	    }
+      else if (strcmp(dname, "")==0) strcat(dname, "/"); // if filename is one character
     }
 
     // (2). // dirname must exist and is a DIR:

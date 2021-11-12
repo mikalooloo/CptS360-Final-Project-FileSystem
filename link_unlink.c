@@ -4,6 +4,8 @@
 
 extern int dev;
 extern char * totalPath();
+extern PROC   proc[NPROC], *running;
+extern char * name[64];
 
 //trunctate function
 INODE *truncate_ino(INODE *i)
@@ -20,7 +22,7 @@ INODE *truncate_ino(INODE *i)
 int my_link(char *old_file, char *new_file)
 {
 	//var dec/init
-	char parent[1024], child[1024], buf[BLKSIZE];
+	char parent[1024] = "", child[1024] = "", buf[BLKSIZE];
 	int oino, oino2, bnum, needLen, bestLen, newRec;
 	MINODE *omip, *omip2;
 	char *cp;
@@ -30,34 +32,68 @@ int my_link(char *old_file, char *new_file)
 	//1 -- verify that file exists and is not a DIR
 	oino = getino(old_file);
 
-	if(oino <= 0)
+	if(oino == -1)
 	{
-		printf("Attention: the first file %s does not exist: link failed\n", old_file);
+		printf("\nAttention: the first file %s does not exist: link failed\n", old_file);
 		return -1;
 	}
+	else printf("first file %s exists: passed file check\n", old_file);
 
 	omip = iget(dev, oino);
 
 	//check if reg
 	if(!S_ISREG(omip->INODE.i_mode))
 	{
-		printf("Attention: not regular: link failed\n");
+		printf("\nAttention: the first file %s is not regular: link failed\n", old_file);
 		iput(omip);
 		return -1;
 	}
+	else printf("first file %s is regular: passed reg check\n", old_file);
 
 	//check second file
+	// see if valid
+	if (strcmp(new_file, "")==0) {
+		printf("\nAttention: the second filename is not valid: link failed\n");
+		return -1;
+	}
 	oino2 = getino(new_file);
 
+	// if valid does it exist
 	if(oino2 != -1)
 	{
-		printf("Attention: the second file %s already exists: link failed\n", new_file);
+		printf("\nAttention: the second file %s already exists: link failed\n", new_file);
 		iput(omip);
 		return -1;
 	}
+	else printf("second file %s does not exist yet: passed file check\n", new_file);
 
-	strcpy(parent, dirname(new_file));
-	strcpy(child, basename(new_file));
+	// tokenizing filename to check new_file
+    int n = (tokenize(new_file) - 1);
+    int i;
+
+    for (i = 0; i < n; ++i) {
+      strcat(parent, "/");
+      strcat(parent, name[i]);
+    }
+    strcpy(child, name[i]);
+
+	if (new_file[0] == '/') { // if absolute
+		printf("link name %s is absolute\n", child);
+		if (i == 0) strcat(parent, "/");
+	}
+	else { // if relative
+      printf("link name %s is relative\n", child);
+      // getting cwd
+      char path[128];
+      strcpy(path, rpwd(running->cwd, 0));
+      if (strcmp(path, "/")!=0) {
+		  strcat(path, parent);
+		  strcpy(parent, path);
+	  }
+	  else if (strcmp(parent, "")==0) strcat(parent, "/"); // if filename is one character
+    }
+
+	// checking new_file
 	oino2 = getino(parent);
 
 	if (oino2 == -1) 
@@ -65,67 +101,22 @@ int my_link(char *old_file, char *new_file)
 		printf("Attention: parent %s does not exist: link failed\n", parent);
 		return -1;
 	}
+	else printf("parent %s exists: passed parent check\n", parent);
 
 	omip2 = iget(omip->dev, oino2);
 
 	//check dir parent
 	if(!S_ISDIR(omip2->INODE.i_mode))
 	{
-		printf("Attention: parent not a directory: link failed\n");
+		printf("Attention: parent %s not a directory: link failed\n", parent);
 		iput(omip);
 		iput(omip2);
 		return -1;
 	}
+	else printf("parent %s is a DIR: passed DIR check\n", parent);
 
-	/*//check if filename already used
-	oino2 = search(omip2, child);
-
-	if(oino2 > 0)
-	{
-		printf("File exits: link failed\n");
-		iput(omip);
-		iput(omip2);
-		return -1;
-	}*/
-
+	// make new_file
 	enter_name(omip2, oino, child);
-	/* memset(buf, 0, BLKSIZE);
-	needLen = 4*((8+strlen(child)+3)/4);
-	bnum = findLastBlock(omip2);
-	//check if there is enough room
-	get_block(omip2->dev, bnum, buf);
-	dp = (DIR*)buf;
-	cp = buf;
-	while((dp->rec_len + cp)< buf+BLKSIZE)
-	{
-		cp += dp->rec_len;
-		dp = (DIR*)cp;
-	}
-	bestLen = 4*((8+dp->name_len+3)/4);
-	if(dp->rec_len - bestLen >= needLen)
-	{
-		newRec = dp->rec_len - bestLen;
-		dp->rec_len = bestLen;
-		cp += dp->rec_len;
-		dp = (DIR*)cp;
-		dp->inode = oino;
-		dp->name_len = strlen(child);
-		strncpy(dp->name, child, dp->name_len);
-		dp->rec_len = newRec;
-	}
-	//allocate
-	else
-	{
-		bnum = balloc(omip2->dev);
-		dp = (DIR*)buf;
-		dp->inode = oino;
-		dp->name_len = strlen(child);
-		strncpy(dp->name, child, dp->name_len);
-		dp->rec_len = BLKSIZE;
-	} */
-
-
-	//put_block(omip2->dev, bnum, buf);
 	
 	omip->INODE.i_links_count++;//inc INODE's links_count by 1
 
@@ -135,6 +126,7 @@ int my_link(char *old_file, char *new_file)
 	iput(omip);
 	iput(omip2);
 
+	printf("\nlink successful\n");
 	return 1;
 }
 
@@ -154,38 +146,73 @@ int my_unlink(char *filename)
 	char buf[1024];
 	//int dev = 0;
 	
-	//(1). get filename's minode
-	int ino = getino(filename);
-	MINODE * mip = iget(dev, ino);
+	char parent[128];
+	char child[128];
+	
+    int n = (tokenize(filename) - 1);
+    int i;
 
-	//check if it exists
-	if(ino == -1)
+    for (i = 0; i < n; ++i) {
+      strcat(parent, "/");
+      strcat(parent, name[i]);
+    }
+    strcpy(child, name[i]);
+
+	//(1). get filename's minode
+	if (filename[0] == '/') { // if absolute
+		printf("unlink name %s is absolute\n", child);
+		if (i == 0) strcat(parent, "/");
+	}
+	else { // if relative
+      printf("unlink name %s is relative\n", child);
+      // getting cwd
+      char path[128];
+      strcpy(path, rpwd(running->cwd, 0));
+      if (strcmp(path, "/")!=0) {
+		  strcat(path, parent);
+	  	  printf("dirname: %s\n, path: %s\n", parent, path);
+		  strcpy(parent, path);
+	  }
+	  else if (strcmp(parent, "")==0) strcat(parent, "/"); // if filename is one character
+    }
+
+	int ino = getino(filename);
+	if (ino == -1) 
 	{
-		printf("Attention: filename, %s, does not exist: unlink failed\n", filename);
+		printf("\nc%s does not exist: unlink failed\n", filename);
 		return -1;
 	}
-	
-	int blk = (ino - 1)/8; //CHECK IF RIGHT 
-	int offset = (ino - 1) % 8;
+	else printf("%s exists: passed existing file check\n", filename);
 
-	get_block(dev, blk, buf);
-
-	//mip = (INODE*)buf + offset;
+	MINODE * mip = iget(dev, ino);
 
 	//check if a REG or symbolic LNK file; can not be a DIR
 	if(S_ISDIR(mip->INODE.i_mode))
 	{
-		printf("Attention: Cannot unlink as it is not a DIR: unlink failed\n");
+		printf("Attention: %s is a DIR: unlink failed\n", child);
 		return -1;
 	}
-
-	//(2). remove name entry from parent DIR's data block
-	char * parent = dirname(filename);
-	char * child = basename(filename);
+	else printf("%s is not a DIR: passed DIR check\n", child);
 
 	int pino = getino(parent);
+	//check if it exists
+	if(pino == -1)
+	{
+		printf("Attention: %s does not exist: unlink failed\n", parent);
+		return -1;
+	}
+	else printf("file %s exists: passed existing file check\n", parent);
+	
 	MINODE * pmip = iget(dev, pino);
 
+	int blk = (ino - 1)/8; //CHECK IF RIGHT 
+	int offset = (ino - 1) % 8;
+
+	//get_block(dev, blk, buf);
+
+	//mip = (INODE*)buf + offset;
+
+	//(2). remove name entry from parent DIR's data block
 	rm_child(pmip, child);
 	pmip->dirty = 1; //ERROR: CHECK TYPE
 
@@ -198,7 +225,6 @@ int my_unlink(char *filename)
 	if(mip->INODE.i_links_count > 0)
 	{
 		mip->dirty = 1; //for write INODE back to disk
-		iput(mip);
 	}
 
 	//(5).
@@ -207,10 +233,20 @@ int my_unlink(char *filename)
 		//if links_count = 0: remove filename
 		//deallocate all data blocks in INODE
 		//deallocate INODE;
-		
+		for (int i = 0; i < 12; ++i) {
+			if (mip->INODE.i_block[i] == 0) break;
+			bdalloc(mip->dev, mip->INODE.i_block[i]);
+			mip->INODE.i_block[i] = 0;
+		}
+
+		mip->INODE.i_blocks = 0;
+		mip->INODE.i_size = 0;
+		mip->dirty = 1;
 	}
 	//release mip
 	iput(mip);
+
+	printf("\nunlink successful\n");
 }
 
 
