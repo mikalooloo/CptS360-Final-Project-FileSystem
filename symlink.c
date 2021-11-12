@@ -2,11 +2,15 @@
 
 #include "header.h"
 
+int my_symlink(char *pathname) {
+	// separates pathname into old file and new file and calls symlink
+}
+
 //function symlink creates a symbolic link from new_file to old_file
 //unlike hard links, bc symlink can link to anything, including DIRs, or even files not on the same
 //device.
 //symlink command: symlink old_file new_file
-int symlnk(char *old_file, char *new_file)
+int symlink(char *old_file, char *new_file)
 {
 	//initialize buf
 	char buf[1024];
@@ -30,12 +34,12 @@ int symlnk(char *old_file, char *new_file)
 	//check if file type is valid
 	if(!(S_ISDIR(minode->i_mode) || S_ISREG(minode->i_mode)))
 	{
-		printf("Attention: file type invalid!\n");
-		return;
+		printf("Attention: file type invalid: symlink failed\n");
+		return -1;
 	}
 
 	//(2). creat new_file: change new_file to LNK type
-	mkdir_creat(new_file);
+	mycreat(new_file);
 
 	int ino = getino(new_file);
 	int blk = (ino -1) / 8;
@@ -48,6 +52,8 @@ int symlnk(char *old_file, char *new_file)
 	strcpy((char*) new_ino->i_block, new_file);
 
 	put_block(dev, blk, buf);
+
+	return 0;
 }
 
 //readLink function reads the target file name of a symbolic file and returns the length of the target 
