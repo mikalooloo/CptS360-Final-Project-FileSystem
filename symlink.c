@@ -2,9 +2,7 @@
 
 #include "header.h"
 
-int my_symlink(char *pathname) {
-	// separates pathname into old file and new file and calls symlink
-}
+extern int dev;
 
 //function symlink creates a symbolic link from new_file to old_file
 //unlike hard links, bc symlink can link to anything, including DIRs, or even files not on the same
@@ -13,45 +11,54 @@ int my_symlink(char *pathname) {
 int symlink(char *old_file, char *new_file)
 {
 	//initialize buf
-	char buf[1024];
+	char buf[BLKSIZE];
 
-	int dev;
 	int old_ino = getino(old_file);
 
 	//(1). check: old_file must exist and new_file does not exist
-	if(old_ino == 0)
+	if(old_ino == -1)
 	{
-		printf("Attention: %s does not exist!\n", old_file);
-		return 0;
+		printf("\nAttention: %s does not exist: symlink failed\n", old_file);
+		return -1;
 	}
+	else printf("%s does exist: passed existence check\n", old_file);
 
-	int n_blk = (old_ino - 1) / 8;
-	int off = (old_ino - 1) % 8;
-	get_block(dev, n_blk, buf);
+	//MINODE * old_mip = iget(dev, old_ino);
 
-	INODE *minode = (INODE*)buf + off;
-
-	//check if file type is valid
-	if(!(S_ISDIR(minode->i_mode) || S_ISREG(minode->i_mode)))
+	/* //check if file type is valid
+	if(!(S_ISDIR(old_mip->INODE.i_mode) || S_ISREG(old_mip->INODE.i_mode)))
 	{
 		printf("Attention: file type invalid: symlink failed\n");
 		return -1;
 	}
+ */
+	int ino = getino(new_file);
 
+	if (ino != -1) 
+	{
+		printf("\nAttention: %s already exists: symlink failed\n", new_file);
+		return -1;
+	}
+	else printf("%s does not yet exist: passed existence check\n", new_file);
+
+	
 	//(2). creat new_file: change new_file to LNK type
 	mycreat(new_file);
+	int ino2 = getino(new_file);
+	if (ino2 == -1) 
+	{
+		printf("\nAttention: %s creat failed: symlink failed\n", new_file);
+		return -1;
+	}
+	else printf("%s exists: passed creat check\n", new_file);
 
-	int ino = getino(new_file);
-	int blk = (ino -1) / 8;
-	int offset = (ino - 1) % 8;
-	get_block(dev, blk, buf);
-
-	INODE *new_ino = (INODE*)buf + offset;
-
+	MINODE * mip = iget(dev, ino2);
+	mip->INODE.i_mode = 0120000; // setting to lnk type
+	mip->dirty = 1;
 	//copy name
-	strcpy((char*) new_ino->i_block, new_file);
-
-	put_block(dev, blk, buf);
+	strcpy((char*) mip->INODE.i_block, old_file);
+	mip->INODE.i_size = strlen(old_file); 
+	iput(mip);
 
 	return 0;
 }
@@ -60,7 +67,7 @@ int symlink(char *old_file, char *new_file)
 //file name
 int readLink(char *file, char *buffer)
 {
-	char buf[1024];
+	char buf[BLKSIZE];
 	//(1). get file's INODE in memory; verify its a link file
 	//(2). copy target filename from INODE.i_block() into buffer
 	//(3). return file size
