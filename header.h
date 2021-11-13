@@ -27,6 +27,7 @@ int symlink(char *old_file, char *new_file);
 int enter_name(MINODE * pip, int ino, char * basename);
 int rm_child(MINODE * pmip, char *rname);
 int balloc(int dev);
+int idalloc(int dev, int ino);
 int bdalloc(int dev, int bno);
 char * rpwd(MINODE *wd, int print);
 

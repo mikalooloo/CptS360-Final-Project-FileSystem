@@ -239,6 +239,7 @@ int my_unlink(char *filename)
 			mip->INODE.i_block[i] = 0;
 		}
 
+		idalloc(dev, ino);
 		mip->INODE.i_blocks = 0;
 		mip->INODE.i_size = 0;
 		mip->dirty = 1;
