@@ -146,8 +146,8 @@ int my_unlink(char *filename)
 	char buf[1024];
 	//int dev = 0;
 	
-	char parent[128];
-	char child[128];
+	char parent[128] = "";
+	char child[128] = "";
 	
     int n = (tokenize(filename) - 1);
     int i;
@@ -239,6 +239,7 @@ int my_unlink(char *filename)
 			mip->INODE.i_block[i] = 0;
 		}
 
+		idalloc(dev, ino);
 		mip->INODE.i_blocks = 0;
 		mip->INODE.i_size = 0;
 		mip->dirty = 1;
