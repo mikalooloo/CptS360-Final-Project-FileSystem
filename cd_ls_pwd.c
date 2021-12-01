@@ -11,7 +11,7 @@ char *t2 = "----------------";
 
 // changes cwd to pathname
 // returns 0 if successful, -1 if failed
-int cd(char * pathname)
+int my_cd(char * pathname)
 {
   // (1). int ino = getino(pathname); // return error if ino==-1
   int ino = getino(pathname);
@@ -124,7 +124,7 @@ int ls_dir(MINODE *mip)
   }
 }
 
-int ls(char * pathname)
+int my_ls(char * pathname)
 {
   if (strcmp(pathname, "") != 0) printf("\nls %s\n", pathname);
   else printf("\nls cwd\n");
@@ -174,7 +174,7 @@ char * rpwd(MINODE *wd, int print) {
 }
 
 
-char *pwd(MINODE *wd)
+int my_pwd(MINODE *wd)
 {
   if (wd == root) {
     printf("\n/\n");
