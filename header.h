@@ -3,6 +3,7 @@
 
 #include "type.h"
 
+// util functions
 int get_block(int dev, int blk, char *buf);
 int put_block(int dev, int blk, char *buf);
 int tokenize(char *pathname);
@@ -13,17 +14,21 @@ int getino(char *pathname);
 int findmyname(MINODE *parent, u32 myino, char myname[ ]) ;
 int findino(MINODE *mip, u32 *myino);
 
-int cd(char * pathname);
-int ls(char * pathname);
-char *pwd(MINODE *wd);
+// my_command functions
+int my_cd(char * pathname);
+int my_ls(char * pathname);
+int my_pwd(MINODE *wd);
 int quit();
-int mymkdir(char *pathname);
-int mycreat(char *pathname);
-int myrmdir(char *pathname);
+int my_mkdir(char *pathname);
+int my_creat(char *pathname);
+int my_rmdir(char *pathname);
 int my_link(char *old_file, char *new_file);
 int my_unlink(char *filename);
-int symlink(char *old_file, char *new_file);
+int my_symlink(char *old_file, char *new_file);
+int my_cat(char *pathname);
+int my_cp(char * src, char * dest);
 
+// command helper functions
 int enter_name(MINODE * pip, int ino, char * basename);
 int rm_child(MINODE * pmip, char *rname);
 int balloc(int dev);
