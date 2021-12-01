@@ -53,7 +53,7 @@ int main(int argc, char *argv[ ])
   int ino;
   char buf[BLKSIZE];
   if (argc > 1) disk = argv[1];
-  
+
   printf("checking EXT2 FS ....");
   if ((fd = open(disk, O_RDWR)) < 0){
     printf("open %s failed\n", disk);
@@ -108,25 +108,30 @@ int main(int argc, char *argv[ ])
     printf("\ncmd=%s pathname=%s\n", cmd, pathname);
   
     if (strcmp(cmd, "ls")==0)
-       ls(pathname);
+       my_ls(pathname);
     else if (strcmp(cmd, "cd")==0)
-       cd(pathname);
+       my_cd(pathname);
     else if (strcmp(cmd, "pwd")==0)
-       pwd(running->cwd);
+       my_pwd(running->cwd);
     else if (strcmp(cmd, "mkdir")==0)
-       mymkdir(pathname);
+       my_mkdir(pathname);
     else if (strcmp(cmd, "creat")==0)
-      mycreat(pathname);
+       my_creat(pathname);
     else if (strcmp(cmd, "rmdir")==0)
-      myrmdir(pathname);
+       my_rmdir(pathname);
     else if (strcmp(cmd, "link")==0) {
-      sscanf(line, "%s %s %s", cmd, pathname, pathname2);
-      my_link(pathname, pathname2); }
+       sscanf(line, "%s %s %s", cmd, pathname, pathname2);
+       my_link(pathname, pathname2); }
     else if (strcmp(cmd, "unlink")==0)
-      my_unlink(pathname);
+       my_unlink(pathname);
     else if (strcmp(cmd, "symlink")==0) {
-      sscanf(line, "%s %s %s", cmd, pathname, pathname2);
-      symlink(pathname, pathname2); }
+       sscanf(line, "%s %s %s", cmd, pathname, pathname2);
+       my_symlink(pathname, pathname2); }
+    else if (strcmp(cmd, "cat")==0)
+       my_cat(pathname);
+    else if (strcmp(cmd, "cp")==0) {
+       sscanf(line, "%s %s %s", cmd, pathname, pathname2);
+       my_cp(pathname, pathname2); }
     else if (strcmp(cmd, "quit")==0)
        quit();
   }
