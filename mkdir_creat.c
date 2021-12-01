@@ -216,7 +216,7 @@ int kmkdir(MINODE * pmip, char * basename) {
   enter_name(pmip, ino, basename);
 }
 
-int mymkdir(char * pathname) {
+int my_mkdir(char * pathname) {
     // (1). divide pathname into dirname and basename, e.g. pathname=/a/b/c, then dirname=/a/b; basename=c;
     char dname[128] = "", bname[128] = "";
     int n = (tokenize(pathname) - 1);
@@ -304,7 +304,7 @@ int kcreat(MINODE * pmip, char * basename) {
   enter_name(pmip, ino, basename);
 }
 
-int mycreat(char * pathname) {
+int my_creat(char * pathname) {
   // (1). divide pathname into dirname and basename, e.g. pathname=/a/b/c, then dirname=/a/b; basename=c;
     char dname[128] = "", bname[128];
     int n = (tokenize(pathname) - 1);
