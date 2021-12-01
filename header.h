@@ -31,4 +31,7 @@ int idalloc(int dev, int ino);
 int bdalloc(int dev, int bno);
 char * rpwd(MINODE *wd, int print);
 
+int open_file(char * pathname);
+int close_file(int fd);
+
 #endif
