@@ -8,7 +8,7 @@ extern int dev;
 //unlike hard links, bc symlink can link to anything, including DIRs, or even files not on the same
 //device.
 //symlink command: symlink old_file new_file
-int symlink(char *old_file, char *new_file)
+int my_symlink(char *old_file, char *new_file)
 {
 	//initialize buf
 	char buf[BLKSIZE];
@@ -43,7 +43,7 @@ int symlink(char *old_file, char *new_file)
 
 	
 	//(2). creat new_file: change new_file to LNK type
-	mycreat(new_file);
+	my_creat(new_file);
 	int ino2 = getino(new_file);
 	if (ino2 == -1) 
 	{
