@@ -11,7 +11,7 @@ int read_file()
 	
 }
 
-int my_read(int fd, char buf[], int nbytes)
+int myread(int fd, char buf[], int nbytes)
 {
 	//int count = 0
 	//avil = fileSize - OFT's offset (number of bytes still available in file)
@@ -46,7 +46,7 @@ int my_cat(char *pathname)
 
 	int fd = open_file(temp);
 
-	while(n = my_read(fd, mybuf, 1024))
+	while(n = myread(fd, mybuf, 1024))
 	{
 		mybuf[n] = 0;
 		printf("%s", mybuf);
