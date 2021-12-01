@@ -1,13 +1,22 @@
 # mkdisk: create a virtual disk diskimage
 
-sudo dd if=/dev/zero of=diskimage bs=1024 count=1440
-sudo mke2fs -b 1024 diskimage 1440
+if [ -z $1] # if user does not pass a disk name via command line
+then
+	sudo dd if=/dev/zero of=diskimage bs=1024 count=1440
+	sudo mke2fs -b 1024 diskimage 1440
 
-sudo mount diskimage /mnt
+	sudo mount diskimage /mnt
 
-(cd /mnt; ls -l)
+	(cd /mnt; sudo rmdir lost+found; ls -l)
 
-sudo umount /mnt
+	sudo umount /mnt
+else # if user did pass a disk name via command line
+	sudo mount $1 /mnt
+	
+	(cd /mnt; ls -l)
+	
+	sudo umount /mnt
+fi
 
 ./mk
-./a.out
+./a.out $1
