@@ -158,7 +158,7 @@ int rm_child(MINODE * pmip, char *rname)
 }
 
 
-int myrmdir(char * pathname) {
+int my_rmdir(char * pathname) {
     char * cp, buf[BLKSIZE]; 
 
     // (1). get in-memory INODE of pathname:
