@@ -79,7 +79,8 @@ int ls_file(MINODE *mip, char *name)
   printf("%4d ", mip->INODE.i_uid);
   printf("%8d ", mip->INODE.i_size);
   //copy string, then print
-  strcpy(ftime, ctime((time_t *)&mip->INODE.i_mtime));
+  time_t time_m = mip->INODE.i_mtime;
+  strcpy(ftime, ctime(&time_m));
   ftime[strlen(ftime) - 1] = 0;
   printf("%s ", ftime);
   //output name
@@ -148,7 +149,6 @@ char * rpwd(MINODE *wd, int print) {
   if (wd == root) {
     return "/";
   }
-
   // (2). from wd->INODE.i_block[0], get my_ino and parent_ino
   int my_ino;
   int parent_ino;
@@ -162,15 +162,14 @@ char * rpwd(MINODE *wd, int print) {
   findmyname(pip, my_ino, my_name);
 
   // (5). rpwd(pip); // recursive call rpwd(pip) with parent minode
+  printf("\n");
   char * temp = rpwd(pip, print);
-  char temp2[128];
-  strcpy(temp2, temp);
   pip->dirty = 1;
   iput(pip);
 
   // (6). print "/%s", my_name;
   if (print) printf("/%s", my_name); // prints cwd
-  else return strcat(temp2, my_name); // returns cwd
+  else return strcat(temp, my_name); // returns cwd
 }
 
 
