@@ -134,8 +134,8 @@ int enter_name(MINODE * pip, int ino, char * name) {
       dp->inode = ino; // setting ino
       dp->rec_len = remain; // setting rec_len
       dp->name_len = strlen(name); // setting name_len
-      strcpy(dp->name, name); // setting name
-      
+      strncpy(dp->name, name, dp->name_len); // setting name
+
       put_block(dev, blk, buf);
       return 0;
     }
@@ -154,8 +154,8 @@ int enter_name(MINODE * pip, int ino, char * name) {
       dp->inode = ino; // setting ino
       dp->rec_len = BLKSIZE; // setting rec_len
       dp->name_len = strlen(name); // setting name_len
-      strcpy(dp->name, name); // setting name
-      
+      strncpy(dp->name, name, dp->name_len); // setting name
+
       put_block(dev, blk, buf);
       return 0;
     }
