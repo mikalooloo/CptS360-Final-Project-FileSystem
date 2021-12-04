@@ -28,6 +28,7 @@ int my_unlink(char *filename);
 int my_symlink(char *old_file, char *new_file);
 int my_cat(char *pathname);
 int my_cp(char * src, char * dest);
+int my_pfd();
 
 // command helper functions
 int enter_name(MINODE * pip, int ino, char * basename);
@@ -39,5 +40,8 @@ char * rpwd(MINODE *wd, int print);
 
 int open_file(char * pathname, int mode);
 int close_file(int fd);
+
+// debug
+void printMinnodes(int m);
 
 #endif
