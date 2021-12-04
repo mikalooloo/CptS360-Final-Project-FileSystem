@@ -22,7 +22,7 @@ INODE *truncate_ino(INODE *i)
 int my_link(char *old_file, char *new_file)
 {
 	//var dec/init
-	char parent[1024] = "", child[1024] = "", buf[BLKSIZE];
+	char * parent = (char *)malloc(sizeof(new_file)), * child = (char *)malloc(sizeof(new_file)), buf[BLKSIZE];
 	int oino, oino2, bnum, needLen, bestLen, newRec;
 	MINODE *omip, *omip2;
 	char *cp;
@@ -68,30 +68,7 @@ int my_link(char *old_file, char *new_file)
 	else printf("second file %s does not exist yet: passed file check\n", new_file);
 
 	// tokenizing filename to check new_file
-    int n = (tokenize(new_file) - 1);
-    int i;
-
-    for (i = 0; i < n; ++i) {
-      strcat(parent, "/");
-      strcat(parent, name[i]);
-    }
-    strcpy(child, name[i]);
-
-	if (new_file[0] == '/') { // if absolute
-		printf("link name %s is absolute\n", child);
-		if (i == 0) strcat(parent, "/");
-	}
-	else { // if relative
-      printf("link name %s is relative\n", child);
-      // getting cwd
-      char path[128];
-      strcpy(path, rpwd(running->cwd, 0));
-      if (strcmp(path, "/")!=0) {
-		  strcat(path, parent);
-		  strcpy(parent, path);
-	  }
-	  else if (strcmp(parent, "")==0) strcat(parent, "/"); // if filename is one character
-    }
+    separatePathname(new_file, &parent, &child, "link");
 
 	// checking new_file
 	oino2 = getino(parent);
@@ -146,35 +123,8 @@ int my_unlink(char *filename)
 	char buf[1024];
 	//int dev = 0;
 	
-	char parent[128] = "";
-	char child[128] = "";
-	
-    int n = (tokenize(filename) - 1);
-    int i;
-
-    for (i = 0; i < n; ++i) {
-      strcat(parent, "/");
-      strcat(parent, name[i]);
-    }
-    strcpy(child, name[i]);
-
-	//(1). get filename's minode
-	if (filename[0] == '/') { // if absolute
-		printf("unlink name %s is absolute\n", child);
-		if (i == 0) strcat(parent, "/");
-	}
-	else { // if relative
-      printf("unlink name %s is relative\n", child);
-      // getting cwd
-      char path[128];
-      strcpy(path, rpwd(running->cwd, 0));
-      if (strcmp(path, "/")!=0) {
-		  strcat(path, parent);
-	  	  printf("dirname: %s\n, path: %s\n", parent, path);
-		  strcpy(parent, path);
-	  }
-	  else if (strcmp(parent, "")==0) strcat(parent, "/"); // if filename is one character
-    }
+	char * parent = (char *)malloc(sizeof(filename)), * child = (char *)malloc(sizeof(filename));
+    separatePathname(filename, &parent, &child, "unlink");
 
 	int ino = getino(filename);
 	if (ino == -1) 

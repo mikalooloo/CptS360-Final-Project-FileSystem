@@ -148,7 +148,7 @@ int search(MINODE *mip, char *name)
    dp = (DIR *)sbuf;
    cp = sbuf;
    printf("  ino   rlen  nlen  name\n");
-
+int count = 0;
    while (cp < sbuf + BLKSIZE){
      strncpy(temp, dp->name, dp->name_len);
      temp[dp->name_len] = 0;
@@ -160,6 +160,8 @@ int search(MINODE *mip, char *name)
      }
      cp += dp->rec_len;
      dp = (DIR *)cp;
+     ++count;
+     if (count > 10) exit(1);
    }
    return -1;
 }
@@ -180,7 +182,7 @@ int getino(char *pathname)
      mip = root;
   else
      mip = running->cwd;
-
+   
   mip->refCount++;         // because we iput(mip) later
   
   tokenize(pathname);
@@ -190,7 +192,7 @@ int getino(char *pathname)
       printf("getino: i=%d name[%d]=%s\n", i, i, name[i]);
  
       ino = search(mip, name[i]);
-
+   
       if (ino==0){
          iput(mip);
          printf("\nname %s does not exist: getino failed\n", name[i]);
@@ -199,7 +201,7 @@ int getino(char *pathname)
       iput(mip);
       mip = iget(dev, ino);
    }
-
+   
    iput(mip);
    return ino;
 }
@@ -262,4 +264,37 @@ int findino(MINODE *mip, u32 *myino) // myino = i# of . return i# of ..
    * myino = mip->ino;
    dp = (DIR *) (buf + dp->rec_len);
    return dp->inode;
+}
+
+void separatePathname(char * pathname, char ** dname, char ** bname, char * command) 
+{
+   char temp_dname[128] = "", temp_bname[128] = "";
+   int n = (tokenize(pathname) - 1);
+   int i;
+
+   if (pathname[0] == '/') { // if absolute
+      printf("%s pathname %s is absolute\n", command, pathname);
+      temp_dname[0] = '/';
+   }
+
+   for (i = 0; i < n; ++i) {
+      if (i > 0) strcat(temp_dname, "/");
+      strcat(temp_dname, name[i]);
+   }
+   strcpy(temp_bname, name[i]);
+
+   if (pathname[0] != '/') { // if relative
+      printf("%s pathname %s is relative\n", command, pathname);
+      // getting cwd
+      char path[128];
+      strcpy(path, rpwd(running->cwd, 0));
+      if (strcmp(path, "/")!=0) {
+		  strcat(path, temp_dname);
+		  strcpy(temp_dname, path);
+	   }
+      else if (strcmp(temp_dname, "")==0) temp_dname[0] = '/'; // if filename is one character
+    }
+    
+    strcpy(*dname, temp_dname);
+    strcpy(*bname, temp_bname);
 }

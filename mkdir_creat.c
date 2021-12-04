@@ -91,7 +91,7 @@ int enter_name(MINODE * pip, int ino, char * name) {
   int blk;
 
   int ideal_length = 0, need_length = 4* ((8 + strlen(name) + 3)/4);
-  
+
   // assume only 12 direct blocks,
   // for each data block of parent DIR
   for (int i = 0; i < 12; ++i) {
@@ -165,7 +165,6 @@ int enter_name(MINODE * pip, int ino, char * name) {
 
 int kmkdir(MINODE * pmip, char * basename) {
   // kmkdir() consists of 4 major steps:
-
   // (4).1. Allocate an INODE and a disk block:
   int ino = ialloc(dev);
   int blk = balloc(dev);
@@ -173,7 +172,7 @@ int kmkdir(MINODE * pmip, char * basename) {
   // (4).2. mip = iget(dev, ino) // load INODE into a minode
   //initialize mip->INODE as a DIR INODE;
   MINODE *mip = iget(dev, ino);
-  INODE *ip = &mip->INODE;
+  INODE * ip = &mip->INODE;
   ip->i_mode = 0x41ED; // 040755: DIR type and permissions
   ip->i_uid = running->uid; // owner uid
   ip->i_gid = running->gid; // group Id
@@ -218,32 +217,9 @@ int kmkdir(MINODE * pmip, char * basename) {
 
 int my_mkdir(char * pathname) {
     // (1). divide pathname into dirname and basename, e.g. pathname=/a/b/c, then dirname=/a/b; basename=c;
-    char dname[128] = "", bname[128] = "";
-    int n = (tokenize(pathname) - 1);
-    int i;
-
-    for (i = 0; i < n; ++i) {
-      strcat(dname, "/");
-      strcat(dname, name[i]);
-    }
-    strcpy(bname, name[i]);
-
-    if (pathname[0] == '/') { // if absolute
-      printf("mkdir name %s is absolute\n", bname);
-      if (i == 0) strcat(dname, "/");
-    }
-    else { // if relative
-      printf("mkdir name %s is relative\n", bname);
-      // getting cwd
-      char path[128];
-      strcpy(path, rpwd(running->cwd, 0));
-      if (strcmp(path, "/")!=0) {
-		  strcat(path, dname);
-		  strcpy(dname, path);
-	    }
-      else if (strcmp(dname, "")==0) strcat(dname, "/"); // if filename is one character
-    }
-
+    char * dname = (char *)malloc(sizeof(pathname)), * bname = (char *)malloc(sizeof(pathname));
+    separatePathname(pathname, &dname, &bname, "mkdir");
+    
     // (2). // dirname must exist and is a DIR:
     int pino = getino(dname);
     if (pino == -1) {
@@ -251,7 +227,7 @@ int my_mkdir(char * pathname) {
       return -1;
     }
     else printf("parent %s exists: passed parent check\n", dname);
-
+  
     MINODE * pmip = iget(dev, pino);
     //check pmip->INODE is a DIR
     if (!S_ISDIR(pmip->INODE.i_mode)) {
@@ -306,31 +282,8 @@ int kcreat(MINODE * pmip, char * basename) {
 
 int my_creat(char * pathname) {
   // (1). divide pathname into dirname and basename, e.g. pathname=/a/b/c, then dirname=/a/b; basename=c;
-    char dname[128] = "", bname[128];
-    int n = (tokenize(pathname) - 1);
-    int i;
-
-    for (i = 0; i < n; ++i) {
-      strcat(dname, "/");
-      strcat(dname, name[i]);
-    }
-    strcpy(bname, name[i]);
-
-    if (pathname[0] == '/') { // if absolute
-      printf("creat name %s is absolute\n", bname);
-      if (i == 0) strcpy(dname, "/");
-    }
-    else { // if relative
-      printf("creat name %s is relative\n", bname);
-      // getting cwd
-      char path[128];
-      strcpy(path, rpwd(running->cwd, 0));
-      if (strcmp(path, "/")!=0) {
-		    strcat(path, dname);
-		    strcpy(dname, path);
-	    }
-      else if (strcmp(dname, "")==0) strcat(dname, "/"); // if filename is one character
-    }
+    char * dname = (char *)malloc(sizeof(pathname)), * bname = (char *)malloc(sizeof(pathname));
+    separatePathname(pathname, &dname, &bname, "creat");
 
     // (2). // dirname must exist and is a DIR:
     int pino = getino(dname);

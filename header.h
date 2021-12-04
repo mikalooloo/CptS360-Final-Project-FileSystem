@@ -13,6 +13,7 @@ int search(MINODE *mip, char *name);
 int getino(char *pathname);
 int findmyname(MINODE *parent, u32 myino, char myname[ ]) ;
 int findino(MINODE *mip, u32 *myino);
+void separatePathname(char * pathname, char ** dname, char ** bname, char * command);
 
 // my_command functions
 int my_cd(char * pathname);
@@ -36,7 +37,7 @@ int idalloc(int dev, int ino);
 int bdalloc(int dev, int bno);
 char * rpwd(MINODE *wd, int print);
 
-int open_file(char * pathname);
+int open_file(char * pathname, int mode);
 int close_file(int fd);
 
 #endif
