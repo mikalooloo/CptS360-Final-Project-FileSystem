@@ -56,6 +56,7 @@ char *disk = "diskimage";
 int main(int argc, char *argv[ ])
 {
   int ino;
+  int debug = 0;
   char buf[BLKSIZE];
   if (argc > 1) disk = argv[1];
 
@@ -101,7 +102,7 @@ int main(int argc, char *argv[ ])
   // WRTIE code here to create P1 as a USER process
   printf("\n************************\n");
   while(1){
-    printf("\n[menu|ls|cd|pwd|mkdir|creat|rmdir|link|unlink|symlink|cat|cp|quit]\ninput command :  ");
+    printf("\n[menu|ls|cd|pwd|mkdir|creat|rmdir|link|unlink|symlink|cat|cp|pfd|debug|quit]\ninput command :  ");
     fgets(line, 128, stdin);
     line[strlen(line)-1] = 0;
 
@@ -111,7 +112,7 @@ int main(int argc, char *argv[ ])
 
     sscanf(line, "%s %s", cmd, pathname);
     printf("\ncmd=%s pathname=%s\n", cmd, pathname);
-   
+
     if (strcmp(cmd, "menu")==0)
        my_menu();
     else if (strcmp(cmd, "ls")==0)
@@ -139,13 +140,28 @@ int main(int argc, char *argv[ ])
     else if (strcmp(cmd, "cp")==0) {
        sscanf(line, "%s %s %s", cmd, pathname, pathname2);
        my_cp(pathname, pathname2); }
-    else if (strcmp(cmd, "open")==0) {
-      int d = -1;
-      sscanf(line, "%s %s %d", cmd, pathname, &d);
-       open_file(pathname, d);
-    }
+    else if (strcmp(cmd, "pfd")==0)
+       my_pfd(); 
     else if (strcmp(cmd, "quit")==0)
        quit();
+    else if (strcmp(cmd, "debug")==0) {
+       debug = !debug;
+       printf("\ndebug is now %s\n", (debug ? "ON" : "OFF"));
+    }
+    else if (debug) {
+         if (strcmp(cmd, "print")==0) // print (int) -> prints out (int) minnodes
+            printMinnodes(atoi(pathname));
+         else if (strcmp(cmd, "open")==0) { // open file
+            int d = -1;
+            sscanf(line, "%s %s %d", cmd, pathname, &d);
+            open_file(pathname, d); }
+         else if (strcmp(cmd, "close")==0)  // close file
+            close_file(atoi(pathname));
+         else  
+            printf("\nnot valid command\n");
+    }
+    else
+      printf("\nnot valid command\n");
   }
 }
 
@@ -163,6 +179,8 @@ void my_menu() {
    printf("\n[symlink (name1) (name2)]\nsoft links name2 to name1\n");
    printf("\n[cat (filename)]\nprints contents of filename\n");
    printf("\n[cp (filename1) (filename2)]\ncopies filename1 to filename2\n");
+   printf("\n[pfd]\nprints out currently open files\n");
+   printf("\n[debug]\nuse commands like open, close\n");
    printf("\n[quit]\nquits application\n");
    printf("\n************************\n");
 }
