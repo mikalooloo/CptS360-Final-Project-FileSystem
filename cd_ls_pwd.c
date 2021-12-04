@@ -127,15 +127,17 @@ int ls_dir(MINODE *mip)
 
 int my_ls(char * pathname)
 {
-  if (strcmp(pathname, "") != 0) printf("\nls %s\n", pathname);
-  else printf("\nls cwd\n");
-
-  if (!strcmp(pathname, "")) ls_dir(running->cwd); // if ls the cwd
+  if (strcmp(pathname, "") == 0) 
+  {
+    printf("\nls cwd\n");
+    ls_dir(running->cwd); // if ls the cwd
+  }
   else { // otherwise
     dev = root->dev;
     int ino = getino(pathname);
     MINODE * mip = iget(dev, ino);
 
+    printf("\nls %s\n", pathname);
     if ((mip->INODE.i_mode & 0xF000) == 0x4000) ls_dir(mip);
     else ls_file(mip, basename(pathname));
     iput(mip);
