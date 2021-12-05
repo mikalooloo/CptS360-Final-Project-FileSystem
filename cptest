@@ -11,6 +11,8 @@ then
 	cat /mnt/$2
 	echo $'\n=========     'CAT $3$'     =========\n'
 	cat /mnt/$3
+else
+	echo $'\nEQUAL FILES!\n'
 fi
 
 sudo umount /mnt
