@@ -1,0 +1,16 @@
+# to use this, run ./cptest [diskimage name] [file1] [file2]
+# and it will let you know if they differ or not
+
+sudo mount $1 /mnt
+
+(diff /mnt/$2 /mnt/$3)
+equal=$?
+if [[ $equal -ne 0 ]]
+then
+	echo $'\n=========     'CAT $2$'     =========\n'
+	cat /mnt/$2
+	echo $'\n=========     'CAT $3$'     =========\n'
+	cat /mnt/$3
+fi
+
+sudo umount /mnt
