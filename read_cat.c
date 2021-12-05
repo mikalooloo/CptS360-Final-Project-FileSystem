@@ -62,7 +62,7 @@ int myread(int fd, char buf[], int nbytes)
 	
 	//declare required vars
 	MINODE *mip;
-	OFT *oftp;
+	OFT *oftp = (OFT *)malloc(sizeof(OFT));;
 	int count = 0, lbk, blk, startByte, remain, ino, avil, *ip;
 
 	int indirect_blk, indirect_off;
@@ -70,7 +70,7 @@ int myread(int fd, char buf[], int nbytes)
 
 	char readbuf[1024], temp[1024];
 
-	//set oftp -- FIX
+	//set oftp
 	oftp = running->fd[fd];
 	
 	//check oftp
