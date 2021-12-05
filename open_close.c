@@ -223,10 +223,10 @@ int close_file(int fd)
 
     // 2. verify running->fd[fd] is pointing at a OFT entry
     if (running->fd[fd] == NULL) {
-      printf("\nrunning->fd[%d] is not pointing at a OFT entry: close_file failed\n", fd);
+      printf("\nrunning->fd[%d] is not pointing at a OFT entry (not in use): close_file failed\n", fd);
       return -1;
     }
-    else printf("running->fd[%d] is pointing at an OFT entry: use check passed\n", fd);
+    else printf("fd %d is in use: use check passed\n", fd);
 
     // 3. The following code segments should be fairly obvious:
     OFT * oftp = (OFT *)malloc(sizeof(OFT));
