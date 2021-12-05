@@ -102,7 +102,7 @@ int main(int argc, char *argv[ ])
   // WRTIE code here to create P1 as a USER process
   printf("\n************************\n");
   while(1){
-    printf("\n[menu|ls|cd|pwd|mkdir|creat|rmdir|link|unlink|symlink|cat|cp|pfd|debug|quit]\ninput command :  ");
+    printf("\n[menu|ls|cd|pwd|mkdir|creat|rmdir|link|unlink|symlink|cat|cp|mv|rename|pfd|debug|quit]\ninput command :  ");
     fgets(line, 128, stdin);
     line[strlen(line)-1] = 0;
 
@@ -140,6 +140,9 @@ int main(int argc, char *argv[ ])
     else if (strcmp(cmd, "cp")==0) {
        sscanf(line, "%s %s %s", cmd, pathname, pathname2);
        my_cp(pathname, pathname2); }
+    else if (strcmp(cmd, "mv")==0 || strcmp(cmd, "rename")==0) {
+       sscanf(line, "%s %s %s", cmd, pathname, pathname2);
+       my_mv(pathname, pathname2); }
     else if (strcmp(cmd, "pfd")==0)
        my_pfd(); 
     else if (strcmp(cmd, "quit")==0)
@@ -178,7 +181,9 @@ void my_menu() {
    printf("\n[unlink (filename)]\nunlinks filename\n");
    printf("\n[symlink (name1) (name2)]\nsoft links name2 to name1\n");
    printf("\n[cat (filename)]\nprints contents of filename\n");
-   printf("\n[cp (filename1) (filename2)]\ncopies filename1 to filename2\n");
+   printf("\n[cp (src) (dest)]\ncopies src to dest\n");
+   printf("\n[mv (src) (dest)]\nmoves src to dest\n");
+   printf("\n[rename (src) (dest)]\renames src to dest\n");
    printf("\n[pfd]\nprints out currently open files\n");
    printf("\n[debug]\nuse commands like open, close\n");
    printf("\n[quit]\nquits application\n");
