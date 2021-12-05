@@ -22,7 +22,7 @@ int truncate(MINODE *mip)
   {
     get_block(dev, mip->INODE.i_block[12], buf);
     int j;
-    for (int i = 0; i < 256; ++i) 
+    for (int i = 0; i < 256 + 12; ++i) 
     {
       j = i * 4;
       if (buf[j] == 0) break;
@@ -35,7 +35,7 @@ int truncate(MINODE *mip)
   {
     get_block(dev, mip->INODE.i_block[13], buf);
     int j;
-    for (int i = 0; i < 256; ++i) 
+    for (int i = 0; i < 256 + 12; ++i) 
     {
       j = i * 4;
       if (buf[j] == 0) break;
@@ -212,7 +212,7 @@ int open_file(char * pathname, int mode)
       mip->dirty = 1;
       //iput(mip);
 
-    printf("\nopen_file successful\n");
+    printf("open_file successful\n");
     // 9. return i as the file descriptor
     return smallest_i;
 }
@@ -242,6 +242,6 @@ int close_file(int fd)
 
     free(oftp);
     
-    printf("\nclose_file successful\n");
+    printf("close_file successful\n");
     return 0;
 }
