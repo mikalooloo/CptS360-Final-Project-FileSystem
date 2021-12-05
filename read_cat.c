@@ -263,15 +263,16 @@ int my_cat(char *pathname)
 	char mybuf[1024], dummy = 0;
 	int n;
 
-	char* temp;
-	strcpy(temp, " R");
 
-	int fd = open_file(temp, 0); // open_file takes file name then an int depending on what mode, R = 0
+	int fd = open_file(pathname, 0); // open_file takes file name then an int depending on what mode, R = 0
 
+	printf("\n");
 	while(n = myread(fd, mybuf, 1024))
 	{
 		mybuf[n] = 0;
 		printf("%s", mybuf);
 	}
 	close_file(fd);
+
+	printf("\ncat successful\n");
 }
