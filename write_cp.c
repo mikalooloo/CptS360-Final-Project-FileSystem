@@ -9,7 +9,7 @@ int mywrite(int fd, char buf[ ], int nbytes)
 {
     OFT * oftp = running->fd[fd];
     MINODE * mip = oftp->minodePtr;
-    int blk;
+    int blk, n = nbytes;
     char ibuf[BLKSIZE] = { 0 };
 
     while (nbytes > 0 ){
@@ -49,7 +49,34 @@ int mywrite(int fd, char buf[ ], int nbytes)
         }
         else {
             // double indirect blocks */
-            
+            int indirect_blk = (lbk - 256 - 12) / 256;
+			int indirect_off = (lbk - 256 - 12) % 256;
+
+            if (mip->INODE.i_block[13] == 0){
+                mip->INODE.i_block[13] = balloc(mip->dev);
+                bzero(ibuf, BLKSIZE);
+                put_block(mip->dev, mip->INODE.i_block[13], ibuf);
+            }
+
+            get_block(mip->dev, mip->INODE.i_block[13], ibuf);
+
+            if (ibuf[indirect_blk] == 0) // if there's no data blocks
+            {
+                ibuf[indirect_blk] = balloc(mip->dev);
+                bzero(ibuf, BLKSIZE);
+                put_block(mip->dev, ibuf[indirect_blk], ibuf);
+            }
+
+            get_block(mip->dev, ibuf[indirect_blk], ibuf);
+
+            if (ibuf[indirect_off] == 0) // if there's no data blocks
+            {
+                ibuf[indirect_off] = balloc(mip->dev);
+                bzero(ibuf, BLKSIZE);
+                put_block(mip->dev, ibuf[indirect_off], ibuf);
+            }
+
+            blk = ibuf[indirect_off];
         }
 
         /*
@@ -72,14 +99,14 @@ int mywrite(int fd, char buf[ ], int nbytes)
 
         if (remain > nbytes) // there's enough room
         {
-            memmove(cq, cp, nbytes);
+            memmove(cp, cq, nbytes);
             cp += nbytes; cq += nbytes;
             oftp->offset += nbytes;
             nbytes = 0;
         }
         else // there's not, so do as much as you can
         {
-            memmove(cq, cp, remain);
+            memmove(cp, cq, remain);
             cp += remain; cq += remain;
             oftp->offset += remain;
             nbytes -= remain;
@@ -98,11 +125,10 @@ int mywrite(int fd, char buf[ ], int nbytes)
         put_block(mip->dev, blk, wbuf);   // write wbuf[ ] to disk
      
      // loop back to outer while to write more .... until nbytes are written
-     return nbytes;
   }
 
   mip->dirty = 1;       // mark mip dirty for iput() 
-  printf("wrote %d char into file descriptor fd=%d\n", nbytes, fd);           
+  //printf("wrote %d char into file descriptor fd=%d\n", n, fd);           
   return nbytes;
 }
 
@@ -180,4 +206,5 @@ int my_cp(char * src, char * dest)
     }
 
     close_file(fd); close_file(gd);
+    printf("\ncp successful\n");
 }
