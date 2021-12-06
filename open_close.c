@@ -27,7 +27,9 @@ int truncate(MINODE *mip)
       j = i * 4;
       if (buf[j] == 0) break;
       bdalloc(dev, buf[j]);
+      buf[j] = 0;
     }
+    bdalloc(dev, mip->INODE.i_block[12]);
     mip->INODE.i_block[12] = 0;
   }
      //double indirect data blocks. release them all.
@@ -40,7 +42,9 @@ int truncate(MINODE *mip)
       j = i * 4;
       if (buf[j] == 0) break;
       bdalloc(dev, buf[j]);
+      buf[j] = 0;
     }
+    bdalloc(dev, mip->INODE.i_block[13]);
     mip->INODE.i_block[13] = 0;
   }
 
