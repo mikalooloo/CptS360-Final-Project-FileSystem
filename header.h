@@ -14,8 +14,10 @@ int getino(char *pathname);
 int findmyname(MINODE *parent, u32 myino, char myname[ ]) ;
 int findino(MINODE *mip, u32 *myino);
 void separatePathname(char * pathname, char ** dname, char ** bname, char * command);
+int validPathname(char * pathname);
 
 // my_command functions
+int my_menu();
 int my_cd(char * pathname);
 int my_ls(char * pathname);
 int my_pwd(MINODE *wd);
@@ -44,6 +46,6 @@ int open_file(char * pathname, int mode);
 int close_file(int fd);
 
 // debug
-void printMinnodes(int m);
+int printMinnodes(int m);
 
 #endif
