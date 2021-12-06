@@ -13,6 +13,11 @@ char *t2 = "----------------";
 // returns 0 if successful, -1 if failed
 int my_cd(char * pathname)
 {
+  if (validPathname(pathname) == -1) {
+    printf("\npathname is not valid: cd failed\n");
+    return -1;
+  }
+
   // (1). int ino = getino(pathname); // return error if ino==-1
   int ino = getino(pathname);
   if (ino == -1) {

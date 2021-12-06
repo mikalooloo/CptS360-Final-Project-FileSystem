@@ -77,7 +77,7 @@ int balloc(int dev)
       set_bit(buf, i);
       put_block(dev, bmap, buf);
       decFreeBlocks(dev);
-      printf("allocated blk = %d\n", i+1);
+      //printf("allocated blk = %d\n", i+1);
       return i + 1;
     }
   }
@@ -216,6 +216,12 @@ int kmkdir(MINODE * pmip, char * basename) {
 }
 
 int my_mkdir(char * pathname) {
+    // check for valid pathname
+    if (validPathname(pathname) == -1) {
+      printf("\npathname is not valid: mkdir failed\n");
+      return -1;
+    }
+
     // (1). divide pathname into dirname and basename, e.g. pathname=/a/b/c, then dirname=/a/b; basename=c;
     char * dname = (char *)malloc(sizeof(pathname)), * bname = (char *)malloc(sizeof(pathname));
     separatePathname(pathname, &dname, &bname, "mkdir");
@@ -262,7 +268,7 @@ int kcreat(MINODE * pmip, char * basename) {
   //initialize mip->INODE as a file INODE;
   MINODE *mip = iget(dev, ino);
   INODE *ip = &mip->INODE;
-  ip->i_mode = 0x814A; // file type and permissions
+  ip->i_mode = 0100644; // file type and permissions
   ip->i_uid = running->uid; // owner uid
   ip->i_gid = running->gid; // group Id
   ip->i_size = 0;// no data block allocated for it
@@ -281,6 +287,13 @@ int kcreat(MINODE * pmip, char * basename) {
 }
 
 int my_creat(char * pathname) {
+
+    // check for valid pathname
+    if (validPathname(pathname) == -1) {
+      printf("\npathname is not valid: creat failed\n");
+      return -1;
+    }
+
   // (1). divide pathname into dirname and basename, e.g. pathname=/a/b/c, then dirname=/a/b; basename=c;
     char * dname = (char *)malloc(sizeof(pathname)), * bname = (char *)malloc(sizeof(pathname));
     separatePathname(pathname, &dname, &bname, "creat");

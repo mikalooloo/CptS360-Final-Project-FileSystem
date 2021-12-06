@@ -263,6 +263,11 @@ int my_cat(char *pathname)
 	char mybuf[1024], dummy = 0;
 	int n;
 
+	 // check for valid pathname
+    if (validPathname(pathname) == -1) {
+      printf("\npathname is not valid: cat failed\n");
+      return -1;
+    }
 
 	int fd = open_file(pathname, 0); // open_file takes file name then an int depending on what mode, R = 0
 
@@ -272,6 +277,7 @@ int my_cat(char *pathname)
 		mybuf[n] = 0;
 		printf("%s", mybuf);
 	}
+	printf("\n");
 	close_file(fd);
 
 	printf("\ncat successful\n");

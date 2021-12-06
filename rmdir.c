@@ -161,6 +161,12 @@ int rm_child(MINODE * pmip, char *rname)
 int my_rmdir(char * pathname) {
     char * cp, buf[BLKSIZE]; 
 
+    // check for valid pathname
+    if (validPathname(pathname) == -1) {
+      printf("\npathname is not valid: rmdir failed\n");
+      return -1;
+    }
+
     // (1). get in-memory INODE of pathname:
     int ino = getino(pathname);
     if (ino == -1) {

@@ -13,6 +13,16 @@ int my_symlink(char *old_file, char *new_file)
 	//initialize buf
 	char buf[BLKSIZE];
 
+	 // check for valid pathname
+    if (validPathname(old_file) == -1) {
+      printf("\nfirst pathname is not valid: symlink failed\n");
+      return -1;
+    }
+	if (validPathname(new_file) == -1) {
+      printf("\nsecond pathname is not valid: symlink failed\n");
+      return -1;
+    }
+
 	int old_ino = getino(old_file);
 
 	//(1). check: old_file must exist and new_file does not exist
