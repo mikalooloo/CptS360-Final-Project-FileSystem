@@ -37,7 +37,7 @@ int tokenize(char *pathname)
 {
   int i;
   char *s;
-  printf("tokenize %s\n", pathname);
+  //printf("tokenize %s\n", pathname);
 
   strcpy(gpath, pathname);   // tokens are in global gpath[ ]
   n = 0;
@@ -50,9 +50,9 @@ int tokenize(char *pathname)
   }
   name[n] = 0;
   
-  for (i= 0; i<n; i++)
-    printf("%s  ", name[i]);
-  printf("\n");
+  //for (i= 0; i<n; i++)
+  //  printf("%s  ", name[i]);
+  //printf("\n");
 
   return n;
 }
@@ -158,26 +158,26 @@ int search(MINODE *mip, char *name)
    printf("search for %s in MINODE = [%d, %d]\n", name,mip->dev,mip->ino);
    ip = &(mip->INODE);
 
-   /*** search for name in mip's data blocks: ASSUME i_block[0] ONLY ***/
-
-   get_block(dev, ip->i_block[0], sbuf);
-   dp = (DIR *)sbuf;
-   cp = sbuf;
-   printf("  ino   rlen  nlen  name\n");
-   int count = 0;
-   while (cp < sbuf + BLKSIZE){
-     strncpy(temp, dp->name, dp->name_len);
-     temp[dp->name_len] = 0;
-     printf("%4d  %4d  %4d    %.*s\n", 
-           dp->inode, dp->rec_len, dp->name_len, dp->name_len, dp->name); // add .* to the print so it only prints how long the name is supposed to be (sometimes has extra chars)
-     if (strcmp(temp, name)==0){
-        printf("found %s : ino = %d\n", temp, dp->inode);
-        return dp->inode;
-     }
-     cp += dp->rec_len;
-     dp = (DIR *)cp;
-     ++count;
-     if (count > 10) exit(1);
+   /*** search for name in mip's data blocks: ***/
+   // searching in direct blocks only
+   for (i = 0; i < 12; i++) {
+      if (mip->INODE.i_block[i] == 0) return -1;
+      get_block(dev, ip->i_block[i], sbuf);
+      dp = (DIR *)sbuf;
+      cp = sbuf;
+      printf("  ino   rlen  nlen  name\n");
+      while (cp < sbuf + BLKSIZE){
+         strncpy(temp, dp->name, dp->name_len);
+         temp[dp->name_len] = 0;
+         printf("%4d  %4d  %4d    %.*s\n", 
+            dp->inode, dp->rec_len, dp->name_len, dp->name_len, dp->name); // add .* to the print so it only prints how long the name is supposed to be (sometimes has extra chars)
+         if (strcmp(temp, name)==0){
+            //printf("found %s : ino = %d\n", temp, dp->inode);
+            return dp->inode;
+         }
+         cp += dp->rec_len;
+         dp = (DIR *)cp;
+      }
    }
    return -1;
 }
@@ -188,7 +188,6 @@ int getino(char *pathname)
   char buf[BLKSIZE];
   MINODE *mip;
 
-  printf("getino: pathname=%s\n", pathname);
   if (strcmp(pathname, "/")==0)
       return 2;
   
@@ -314,8 +313,13 @@ void separatePathname(char * pathname, char ** dname, char ** bname, char * comm
     strcpy(*bname, temp_bname);
 }
 
+int validPathname(char * pathname) {
+   if (pathname != NULL && strcmp(pathname, "") != 0) return 1;
+   else return -1;
+}
+
 // debug command only
-void printMinnodes(int m) {
+int printMinnodes(int m) {
    printf("\n%d minnodes\n", m);
    for (int i=0; i<m; i++){
       MINODE *mp = &minode[i];
