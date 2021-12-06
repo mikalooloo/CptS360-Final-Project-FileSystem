@@ -50,8 +50,6 @@ int mount_root()
   root = iget(dev, 2);
 }
 
-void my_menu();
-
 char *disk = "diskimage";
 int main(int argc, char *argv[ ])
 {
@@ -109,9 +107,10 @@ int main(int argc, char *argv[ ])
     if (line[0]==0)
        continue;
     pathname[0] = 0;
+    pathname2[0] = 0;
 
-    sscanf(line, "%s %s", cmd, pathname);
-    printf("\ncmd=%s pathname=%s\n", cmd, pathname);
+    sscanf(line, "%s %s %s", cmd, pathname, pathname2);
+    printf("\ncmd=%s pathname=%s %s\n", cmd, pathname, pathname2);
 
     if (strcmp(cmd, "menu")==0)
        my_menu();
@@ -128,20 +127,16 @@ int main(int argc, char *argv[ ])
     else if (strcmp(cmd, "rmdir")==0)
        my_rmdir(pathname);
     else if (strcmp(cmd, "link")==0) {
-       sscanf(line, "%s %s %s", cmd, pathname, pathname2);
        my_link(pathname, pathname2); }
     else if (strcmp(cmd, "unlink")==0)
        my_unlink(pathname);
     else if (strcmp(cmd, "symlink")==0) {
-       sscanf(line, "%s %s %s", cmd, pathname, pathname2);
        my_symlink(pathname, pathname2); }
     else if (strcmp(cmd, "cat")==0)
        my_cat(pathname);
     else if (strcmp(cmd, "cp")==0) {
-       sscanf(line, "%s %s %s", cmd, pathname, pathname2);
        my_cp(pathname, pathname2); }
     else if (strcmp(cmd, "mv")==0 || strcmp(cmd, "rename")==0) {
-       sscanf(line, "%s %s %s", cmd, pathname, pathname2);
        my_mv(pathname, pathname2); }
     else if (strcmp(cmd, "pfd")==0)
        my_pfd(); 
@@ -154,10 +149,8 @@ int main(int argc, char *argv[ ])
     else if (debug) {
          if (strcmp(cmd, "print")==0) // print (int) -> prints out (int) minnodes
             printMinnodes(atoi(pathname));
-         else if (strcmp(cmd, "open")==0) { // open file
-            int d = -1;
-            sscanf(line, "%s %s %d", cmd, pathname, &d);
-            open_file(pathname, d); }
+         else if (strcmp(cmd, "open")==0)  // open file
+            open_file(pathname, atoi(pathname2)); 
          else if (strcmp(cmd, "close")==0)  // close file
             close_file(atoi(pathname));
          else  
@@ -168,7 +161,7 @@ int main(int argc, char *argv[ ])
   }
 }
 
-void my_menu() {
+int my_menu() {
    printf("\n************************\n");
    printf("\n[menu]\nprints out all possible commands and their descriptions\n");
    printf("\n[ls (optional directory name)]\nprints files and directories in the current working directory by default in a long list format\n");
