@@ -5,12 +5,19 @@
 extern int dev;
 extern PROC   proc[NPROC], *running;
 
+void zero_out(int dev, int blk)
+{
+    char buf[BLKSIZE];
+    bzero(buf, BLKSIZE);
+    put_block(dev, blk, buf);
+}
+
 int mywrite(int fd, char buf[ ], int nbytes) 
 {
     OFT * oftp = running->fd[fd];
     MINODE * mip = oftp->minodePtr;
     int blk, n = nbytes;
-    char ibuf[BLKSIZE] = { 0 };
+    int ibuf[BLKSIZE] = { 0 };
 
     while (nbytes > 0 ){
     // compute LOGICAL BLOCK (lbk) and the startByte in that lbk:
@@ -31,49 +38,61 @@ int mywrite(int fd, char buf[ ], int nbytes)
                 //allocate a block for it;
                 mip->INODE.i_block[12] = balloc(mip->dev);
                 //zero out the block on disk !!!!
-                bzero(ibuf, BLKSIZE);
-                put_block(mip->dev, mip->INODE.i_block[12], ibuf);
+                zero_out(mip->dev, mip->INODE.i_block[12]);
             }
 
-            get_block(mip->dev, mip->INODE.i_block[12], ibuf);
+            get_block(mip->dev, mip->INODE.i_block[12], (char *)ibuf);
               // get i_block[12] into an int ibuf[256];
             blk = ibuf[lbk - 12];
             if (blk==0){
                 //allocate a disk block;
-                blk = balloc(mip->dev);
+                blk = ibuf[lbk - 12] = balloc(mip->dev);
+                if (blk==0) {
+                    printf("no more disk space\n");
+                    return 0;
+                }
                 //record it in i_block[12];
-                mip->INODE.i_blocks++;
-                put_block(mip->dev, blk, ibuf);
+                put_block(mip->dev, mip->INODE.i_block[12], (char *)ibuf);
             }
+
+            
             //.......
         }
         else {
             // double indirect blocks */
+            // using mailman's algorithm
             int indirect_blk = (lbk - 256 - 12) / 256;
 			int indirect_off = (lbk - 256 - 12) % 256;
 
             if (mip->INODE.i_block[13] == 0){
                 mip->INODE.i_block[13] = balloc(mip->dev);
-                bzero(ibuf, BLKSIZE);
-                put_block(mip->dev, mip->INODE.i_block[13], ibuf);
+                zero_out(mip->dev, mip->INODE.i_block[13]);
             }
 
-            get_block(mip->dev, mip->INODE.i_block[13], ibuf);
+            get_block(mip->dev, mip->INODE.i_block[13], (char *)ibuf);
 
             if (ibuf[indirect_blk] == 0) // if there's no data blocks
             {
                 ibuf[indirect_blk] = balloc(mip->dev);
-                bzero(ibuf, BLKSIZE);
-                put_block(mip->dev, ibuf[indirect_blk], ibuf);
+                if (ibuf[indirect_blk]==0) {
+                    printf("no more disk space\n");
+                    return 0;
+                }
+                zero_out(mip->dev, ibuf[indirect_blk]);
+                put_block(mip->dev, mip->INODE.i_block[13], (char *)ibuf);
             }
 
-            get_block(mip->dev, ibuf[indirect_blk], ibuf);
+            get_block(mip->dev, ibuf[indirect_blk], (char *)ibuf);
 
             if (ibuf[indirect_off] == 0) // if there's no data blocks
             {
                 ibuf[indirect_off] = balloc(mip->dev);
-                bzero(ibuf, BLKSIZE);
-                put_block(mip->dev, ibuf[indirect_off], ibuf);
+                if (ibuf[indirect_off]==0) {
+                    printf("no more disk space\n");
+                    return 0;
+                }
+                zero_out(mip->dev, ibuf[indirect_off]);
+                put_block(mip->dev, ibuf[indirect_blk], (char *)ibuf);
             }
 
             blk = ibuf[indirect_off];
@@ -128,7 +147,7 @@ int mywrite(int fd, char buf[ ], int nbytes)
   }
 
   mip->dirty = 1;       // mark mip dirty for iput() 
-  //printf("wrote %d char into file descriptor fd=%d\n", n, fd);           
+  //printf("wrote %d char into file descriptor fd=%d\n", n, fd);          
   return nbytes;
 }
 
@@ -149,6 +168,16 @@ int write_file()
 int my_mv(char * src, char * dest)
 {
     // move file
+    // check for valid pathname
+    if (validPathname(src) == -1) {
+      printf("\nfirst pathname is not valid: mv failed\n");
+      return -1;
+    }
+    if (validPathname(dest) == -1) {
+      printf("\nsecond pathname is not valid: mv failed\n");
+      return -1;
+    }
+
     // verify src exists; get its INODE in ==> you already know its dev
     // 2. check whether src is on the same dev as src
     int sino = getino(src);
@@ -176,9 +205,19 @@ int my_mv(char * src, char * dest)
 
 int my_cp(char * src, char * dest)
 {
+     // check for valid pathname
+    if (validPathname(src) == -1) {
+      printf("\nfirst pathname is not valid: cp failed\n");
+      return -1;
+    }
+    if (validPathname(dest) == -1) {
+      printf("\nsecond pathname is not valid: cp failed\n");
+      return -1;
+    }
+
     // open both files -- open_file should creat a file if it does not currently exist
     int fd = open_file(src, 0); // R = 0
-    int gd = open_file(dest, 2); // RW = 2
+    int gd = open_file(dest, 1); // W = 1
 
     // check to see if both files opened correctly
     if (fd == -1) {
