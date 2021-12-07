@@ -105,10 +105,10 @@ int myread(int fd, char buf[], int nbytes)
 		else if(lbk >= 12 && lbk < 256+12)
 		{
 			//get block
-			get_block(mip->dev, mip->INODE.i_block[12], readbuf);
+			get_block(mip->dev, mip->INODE.i_block[12], (char *)buf2);
 
 			//set ip
-			ip = (int*)readbuf + lbk - 12;
+			ip = buf2 + lbk - 12;
 			//set blk to ip
 			blk = *ip;
 		}
@@ -116,30 +116,30 @@ int myread(int fd, char buf[], int nbytes)
 		else
 		{
 			//get block
-			get_block(mip->dev, mip->INODE.i_block[13], readbuf);
+			get_block(mip->dev, mip->INODE.i_block[13], (char *)buf2);
 
 			//set indirect_blk, and indirect_off
 			indirect_blk = (lbk - 256 - 12) / 256;
 			indirect_off = (lbk - 256 - 12) % 256;
 
 			//output blk, and offset
-			printf("blk = %d, offset = %d\n", indirect_blk, indirect_off);
-			getchar();
+			//printf("blk = %d, offset = %d\n", indirect_blk, indirect_off);
+			//getchar();
 
 			//set ip with indirect_blk
-			ip = (int*)readbuf + indirect_blk;
-			getchar();
+			ip = buf2 + indirect_blk;
+			//getchar();
 			
 			//get block
-			get_block(mip->dev, *ip, readbuf);
-			getchar();
+			get_block(mip->dev, *ip, (char *)buf2);
+			//getchar();
 			
 			//set ip with indirect_off
-			ip = (int*)readbuf + indirect_off;
+			ip = buf2 + indirect_off;
 
 			//set blk to ip pointer
 			blk = *ip;
-			getchar();
+			//getchar();
 		}
 
 		//get data block into readbuf
@@ -153,7 +153,7 @@ int myread(int fd, char buf[], int nbytes)
 
 		//start of read optimization
 		//set and initialize two temp vars to track remianing bytes and availiable, using bitwise XOR operator
-		int temp = remain ^ ((avil ^ remain) & -(avil < remain));
+		/*int temp = remain ^ ((avil ^ remain) & -(avil < remain));
 		int temp2 = nbytes ^ ((temp ^ nbytes) & -(temp < nbytes));
 
 		//check available and remianing bytes
@@ -176,7 +176,22 @@ int myread(int fd, char buf[], int nbytes)
 			{
 				break;
 			}
-		}
+		}*/
+
+		// this is sorta what I did for cat, and it's basically what you've done but
+		// I think this is a little more concise/clearer to read
+		if (remain < nbytes) nbytes = remain;
+		
+		memmove(cq, cp, nbytes);
+        cp += nbytes; cq += nbytes;
+        oftp->offset += nbytes;
+		count += nbytes;
+		avil -= nbytes; remain -= nbytes;
+		nbytes -= nbytes;
+		
+        if (oftp->offset > mip->INODE.i_size)
+            mip->INODE.i_size = oftp->offset;
+
 	}
 	//return count
 	return count;
