@@ -82,20 +82,21 @@ int mywrite(int fd, char buf[ ], int nbytes)
                 put_block(mip->dev, mip->INODE.i_block[13], (char *)ibuf);
             }
 
-            get_block(mip->dev, ibuf[indirect_blk], (char *)ibuf);
+            int ibuf2[BLKSIZE] = { 0 };
+            get_block(mip->dev, ibuf[indirect_blk], (char *)ibuf2);
 
-            if (ibuf[indirect_off] == 0) // if there's no data blocks
+            if (ibuf2[indirect_off] == 0) // if there's no data blocks
             {
-                ibuf[indirect_off] = balloc(mip->dev);
-                if (ibuf[indirect_off]==0) {
+                ibuf2[indirect_off] = balloc(mip->dev);
+                if (ibuf2[indirect_off]==0) {
                     printf("no more disk space\n");
                     return 0;
                 }
-                zero_out(mip->dev, ibuf[indirect_off]);
-                put_block(mip->dev, ibuf[indirect_blk], (char *)ibuf);
+                zero_out(mip->dev, ibuf2[indirect_off]);
+                put_block(mip->dev, ibuf[indirect_blk], (char *)ibuf2);
             }
 
-            blk = ibuf[indirect_off];
+            blk = ibuf2[indirect_off];
         }
 
         /*
@@ -110,26 +111,18 @@ int mywrite(int fd, char buf[ ], int nbytes)
 
      /* all cases come to here : write to the data block */
         char wbuf[BLKSIZE] = { 0 };
-
         get_block(mip->dev, blk, wbuf);   // read disk block into wbuf[ ]  
         char *cp = wbuf + startByte;      // cp points at startByte in wbuf[]
         int remain = BLKSIZE - startByte;     // number of BYTEs remain in this block
         char * cq = buf; // cq points at buf [ ] 
 
-        if (remain > nbytes) // there's enough room
-        {
-            memmove(cp, cq, nbytes);
-            cp += nbytes; cq += nbytes;
-            oftp->offset += nbytes;
-            nbytes = 0;
-        }
-        else // there's not, so do as much as you can
-        {
-            memmove(cp, cq, remain);
-            cp += remain; cq += remain;
-            oftp->offset += remain;
-            nbytes -= remain;
-        }
+        if (remain < nbytes) nbytes = remain;
+
+        memmove(cp, cq, nbytes);
+        cp += nbytes; cq += nbytes;
+        oftp->offset += nbytes;
+        nbytes -= nbytes;
+
         if (oftp->offset > mip->INODE.i_size)
             mip->INODE.i_size = oftp->offset;
         
