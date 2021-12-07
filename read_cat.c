@@ -142,14 +142,6 @@ int myread(int fd, char buf[], int nbytes)
 			//getchar();
 		}
 
-		//get data block into readbuf
-		get_block(mip->dev, blk, readbuf);
-
-		//copy from startByte to buf[], at most remain bytes in this block
-		char *cp = readbuf + startByte;
-
-		//number of bytes that reamin in readbuf
-		remain = BLKSIZE - startByte;
 
 		//start of read optimization
 		//set and initialize two temp vars to track remianing bytes and availiable, using bitwise XOR operator
@@ -177,6 +169,15 @@ int myread(int fd, char buf[], int nbytes)
 				break;
 			}
 		}*/
+		
+		//get data block into readbuf
+		get_block(mip->dev, blk, readbuf);
+
+		//copy from startByte to buf[], at most remain bytes in this block
+		char *cp = readbuf + startByte;
+
+		//number of bytes that reamin in readbuf
+		remain = BLKSIZE - startByte;
 
 		// this is sorta what I did for cat, and it's basically what you've done but
 		// I think this is a little more concise/clearer to read
@@ -188,7 +189,7 @@ int myread(int fd, char buf[], int nbytes)
 		count += nbytes;
 		avil -= nbytes; remain -= nbytes;
 		nbytes -= nbytes;
-		
+
         if (oftp->offset > mip->INODE.i_size)
             mip->INODE.i_size = oftp->offset;
 
