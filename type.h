@@ -31,6 +31,7 @@ DIR   *dp;
 #define BLKSIZE  1024
 #define NMINODE   128
 #define NPROC       2
+#define NFD        16
 
 typedef struct minode{
   INODE INODE;           // INODE structure on disk
@@ -42,6 +43,14 @@ typedef struct minode{
   struct mntable *mptr;  // for level-3
 }MINODE;
 
+// Open file Table // opened file instance
+typedef struct oft{
+  int mode; // mode of opened file
+  int refCount; // number of PROCs sharing this instance
+  MINODE *minodePtr; // pointer to minode of file
+  int offset; // byte offset for R|W
+}OFT;
+
 typedef struct proc
 {
     struct proc *next;
@@ -50,16 +59,8 @@ typedef struct proc
     int status;
     int uid, gid;
     MINODE *cwd;
-    // OFT *fd[NFD];
+    OFT *fd[NFD];
 } PROC;
-
-// Open file Table // opened file instance
-typedef struct oft{
-  int mode; // mode of opened file
-  int refCount; // number of PROCs sharing this instance
-  MINODE *minodePtr; // pointer to minode of file
-  int offset; // byte offset for R|W
-}OFT;
 
 // Mount Table structure
   typedef struct mtable{

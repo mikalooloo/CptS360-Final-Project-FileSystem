@@ -2,66 +2,7 @@
 
 #include "header.h"
 
-int read_file(char *pathname)
-{
-	//preparations:
-	//assume file is opened for RD or RW
-	//ask for a fd and nbytes to read
-	//verify that fd is indeed opened for RD and RW
-	//return (myread(fd, buf, nbytes))
-	
-	//declare path, and second path chars
-	char path[256], second_path[256];
-	split_paths(pathname, path, second_path);
-
-	//from bytes to int
-	int nbytes = atoi(second_path), actual = 0;
-	int fd = 0;
-	OFT *oftp;
-	INODE *pip;
-	MINODE *pmip;
-	int i;
-	char buf[nbytes + 1];
-	MINODE *mip;
-	INODE *ip;
-
-	//copy buf
-	strcpy(buf, "");
-
-	//check fd
-	if(!strcmp(pathname, ""))
-	{
-		printf("Attebtion: no fd!\n");
-		return 0;
-	}
-
-	//convert fd into int
-	fd = atoi(pathname);
-
-	if(!strcmp(second_path, ""))
-	{
-		printf("Attention: no bytes!\n");
-		return 0;
-	}
-
-	//return bytes
-	actual = myread(fd, buf, nbytes);
-
-	//check actual
-	if(actual == -1)
-	{
-		strcpy(second_path, "");
-		return 0;
-	}
-
-	//null
-	buf[actual] = '\0';
-
-	//output result of actual and buf
-	printf("actual = %d buf = %s\n", actual, buf);
-	return actual;
-	
-}
+extern PROC   proc[NPROC], *running;
 
 int myread(int fd, char buf[], int nbytes)
 {
@@ -121,7 +62,7 @@ int myread(int fd, char buf[], int nbytes)
 	
 	//declare required vars
 	MINODE *mip;
-	OFT *oftp;
+	OFT *oftp = (OFT *)malloc(sizeof(OFT));;
 	int count = 0, lbk, blk, startByte, remain, ino, avil, *ip;
 
 	int indirect_blk, indirect_off;
@@ -129,7 +70,7 @@ int myread(int fd, char buf[], int nbytes)
 
 	char readbuf[1024], temp[1024];
 
-	//set oftp -- FIX
+	//set oftp
 	oftp = running->fd[fd];
 	
 	//check oftp
@@ -164,10 +105,10 @@ int myread(int fd, char buf[], int nbytes)
 		else if(lbk >= 12 && lbk < 256+12)
 		{
 			//get block
-			get_block(mip->dev, mip->INODE.i_block[12], readbuf);
+			get_block(mip->dev, mip->INODE.i_block[12], (char *)buf2);
 
 			//set ip
-			ip = (int*)readbuf + lbk - 12;
+			ip = buf2 + lbk - 12;
 			//set blk to ip
 			blk = *ip;
 		}
@@ -175,44 +116,36 @@ int myread(int fd, char buf[], int nbytes)
 		else
 		{
 			//get block
-			get_block(mip->dev, mip->INODE.i_block[13], readbuf);
+			get_block(mip->dev, mip->INODE.i_block[13], (char *)buf2);
 
 			//set indirect_blk, and indirect_off
 			indirect_blk = (lbk - 256 - 12) / 256;
 			indirect_off = (lbk - 256 - 12) % 256;
 
 			//output blk, and offset
-			printf("blk = %d, offset = %d\n", indirect_blk, indirect_off);
-			getchar();
+			//printf("blk = %d, offset = %d\n", indirect_blk, indirect_off);
+			//getchar();
 
 			//set ip with indirect_blk
-			ip = (int*)readbuf + indirect_blk;
-			getchar();
+			ip = buf2 + indirect_blk;
+			//getchar();
 			
 			//get block
-			get_block(mip->dev, *ip, readbuf);
-			getchar();
+			get_block(mip->dev, *ip, (char *)buf2);
+			//getchar();
 			
 			//set ip with indirect_off
-			ip = (int*)readbuf + indirect_off;
+			ip = buf2 + indirect_off;
 
 			//set blk to ip pointer
 			blk = *ip;
-			getchar();
+			//getchar();
 		}
 
-		//get data block into readbuf
-		get_block(mip->dev, blk, readbuf);
-
-		//copy from startByte to buf[], at most remain bytes in this block
-		char *cp = readbuf + startByte;
-
-		//number of bytes that reamin in readbuf
-		remain = BLKSIZE - startByte;
 
 		//start of read optimization
 		//set and initialize two temp vars to track remianing bytes and availiable, using bitwise XOR operator
-		int temp = remain ^ ((avil ^ remain) & -(avil < remain));
+		/*int temp = remain ^ ((avil ^ remain) & -(avil < remain));
 		int temp2 = nbytes ^ ((temp ^ nbytes) & -(temp < nbytes));
 
 		//check available and remianing bytes
@@ -235,11 +168,96 @@ int myread(int fd, char buf[], int nbytes)
 			{
 				break;
 			}
-		}
+		}*/
+		
+		//get data block into readbuf
+		get_block(mip->dev, blk, readbuf);
+
+		//copy from startByte to buf[], at most remain bytes in this block
+		char *cp = readbuf + startByte;
+
+		//number of bytes that reamin in readbuf
+		remain = BLKSIZE - startByte;
+
+		// this is sorta what I did for cat, and it's basically what you've done but
+		// I think this is a little more concise/clearer to read
+		if (remain < nbytes) nbytes = remain;
+		
+		memmove(cq, cp, nbytes);
+        cp += nbytes; cq += nbytes;
+        oftp->offset += nbytes;
+		count += nbytes;
+		avil -= nbytes; remain -= nbytes;
+		nbytes -= nbytes;
+
+        if (oftp->offset > mip->INODE.i_size)
+            mip->INODE.i_size = oftp->offset;
+
 	}
 	//return count
 	return count;
 
+}
+
+int read_file(char *pathname)
+{
+	//preparations:
+	//assume file is opened for RD or RW
+	//ask for a fd and nbytes to read
+	//verify that fd is indeed opened for RD and RW
+	//return (myread(fd, buf, nbytes))
+	
+	//declare path, and second path chars
+	char path[256], second_path[256];
+	//split_paths(pathname, path, second_path);
+
+	//from bytes to int
+	int nbytes = atoi(second_path), actual = 0;
+	int fd = 0;
+	OFT *oftp;
+	INODE *pip;
+	MINODE *pmip;
+	int i;
+	char buf[nbytes + 1];
+	MINODE *mip;
+	INODE *ip;
+
+	//copy buf
+	strcpy(buf, "");
+
+	//check fd
+	if(!strcmp(pathname, ""))
+	{
+		printf("Attebtion: no fd!\n");
+		return 0;
+	}
+
+	//convert fd into int
+	fd = atoi(pathname);
+
+	if(!strcmp(second_path, ""))
+	{
+		printf("Attention: no bytes!\n");
+		return 0;
+	}
+
+	//return bytes
+	actual = myread(fd, buf, nbytes);
+
+	//check actual
+	if(actual == -1)
+	{
+		strcpy(second_path, "");
+		return 0;
+	}
+
+	//null
+	buf[actual] = '\0';
+
+	//output result of actual and buf
+	printf("actual = %d buf = %s\n", actual, buf);
+	return actual;
+	
 }
 
 //cat
@@ -261,15 +279,22 @@ int my_cat(char *pathname)
 	char mybuf[1024], dummy = 0;
 	int n;
 
-	char* temp;
-	strcpy(temp, " R");
+	 // check for valid pathname
+    if (validPathname(pathname) == -1) {
+      printf("\npathname is not valid: cat failed\n");
+      return -1;
+    }
 
-	int fd = open_file(temp);
+	int fd = open_file(pathname, 0); // open_file takes file name then an int depending on what mode, R = 0
 
+	printf("\n");
 	while(n = myread(fd, mybuf, 1024))
 	{
 		mybuf[n] = 0;
 		printf("%s", mybuf);
 	}
+	printf("\n");
 	close_file(fd);
+
+	printf("\ncat successful\n");
 }

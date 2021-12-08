@@ -13,6 +13,11 @@ char *t2 = "----------------";
 // returns 0 if successful, -1 if failed
 int my_cd(char * pathname)
 {
+  if (validPathname(pathname) == -1) {
+    printf("\npathname is not valid: cd failed\n");
+    return -1;
+  }
+
   // (1). int ino = getino(pathname); // return error if ino==-1
   int ino = getino(pathname);
   if (ino == -1) {
@@ -79,7 +84,8 @@ int ls_file(MINODE *mip, char *name)
   printf("%4d ", mip->INODE.i_uid);
   printf("%8d ", mip->INODE.i_size);
   //copy string, then print
-  strcpy(ftime, ctime((time_t *)&mip->INODE.i_mtime));
+  time_t time_m = mip->INODE.i_mtime;
+  strcpy(ftime, ctime(&time_m));
   ftime[strlen(ftime) - 1] = 0;
   printf("%s ", ftime);
   //output name
@@ -126,15 +132,17 @@ int ls_dir(MINODE *mip)
 
 int my_ls(char * pathname)
 {
-  if (strcmp(pathname, "") != 0) printf("\nls %s\n", pathname);
-  else printf("\nls cwd\n");
-
-  if (!strcmp(pathname, "")) ls_dir(running->cwd); // if ls the cwd
+  if (strcmp(pathname, "") == 0) 
+  {
+    printf("\nls cwd\n");
+    ls_dir(running->cwd); // if ls the cwd
+  }
   else { // otherwise
     dev = root->dev;
     int ino = getino(pathname);
     MINODE * mip = iget(dev, ino);
 
+    printf("\nls %s\n", pathname);
     if ((mip->INODE.i_mode & 0xF000) == 0x4000) ls_dir(mip);
     else ls_file(mip, basename(pathname));
     iput(mip);
@@ -148,7 +156,6 @@ char * rpwd(MINODE *wd, int print) {
   if (wd == root) {
     return "/";
   }
-
   // (2). from wd->INODE.i_block[0], get my_ino and parent_ino
   int my_ino;
   int parent_ino;
@@ -162,15 +169,14 @@ char * rpwd(MINODE *wd, int print) {
   findmyname(pip, my_ino, my_name);
 
   // (5). rpwd(pip); // recursive call rpwd(pip) with parent minode
+  printf("\n");
   char * temp = rpwd(pip, print);
-  char temp2[128];
-  strcpy(temp2, temp);
   pip->dirty = 1;
   iput(pip);
 
   // (6). print "/%s", my_name;
   if (print) printf("/%s", my_name); // prints cwd
-  else return strcat(temp2, my_name); // returns cwd
+  else return strcat(temp, my_name); // returns cwd
 }
 
 

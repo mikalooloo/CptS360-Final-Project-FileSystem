@@ -37,7 +37,7 @@ int tokenize(char *pathname)
 {
   int i;
   char *s;
-  printf("tokenize %s\n", pathname);
+  //printf("tokenize %s\n", pathname);
 
   strcpy(gpath, pathname);   // tokens are in global gpath[ ]
   n = 0;
@@ -50,11 +50,30 @@ int tokenize(char *pathname)
   }
   name[n] = 0;
   
-  for (i= 0; i<n; i++)
-    printf("%s  ", name[i]);
-  printf("\n");
+  //for (i= 0; i<n; i++)
+  //  printf("%s  ", name[i]);
+  //printf("\n");
 
   return n;
+}
+
+MINODE *mialloc() // allocate a FREE minode for use
+{
+   int i;
+   for (i=0; i<NMINODE; i++){
+      MINODE *mp = &minode[i];
+      if (mp->refCount == 0){
+         mp->refCount = 1;
+         return mp;
+      }
+   }
+   printf("FS panic: out of minodes\n");
+   return 0;
+}
+
+int midalloc(MINODE *mip) // release a used minode
+{
+   mip->refCount = 0;
 }
 
 // return minode pointer to loaded INODE
@@ -75,29 +94,26 @@ MINODE *iget(int dev, int ino)
     }
   }
     
-  for (i=0; i<NMINODE; i++){
-    mip = &minode[i];
-    if (mip->refCount == 0){
-       //printf("allocating NEW minode[%d] for [%d %d]\n", i, dev, ino);
-       mip->refCount = 1;
-       mip->dev = dev;
-       mip->ino = ino;
+   //printf("allocating NEW minode[%d] for [%d %d]\n", i, dev, ino);
+   mip = mialloc();
+   mip->dev = dev;
+   mip->ino = ino;
+   // get INODE of ino to buf    
+   blk    = (ino-1)/8 + iblk;
+   offset = (ino-1) % 8;
 
-       // get INODE of ino to buf    
-       blk    = (ino-1)/8 + iblk;
-       offset = (ino-1) % 8;
+   //printf("iget: ino=%d blk=%d offset=%d\n", ino, blk, offset);
 
-       //printf("iget: ino=%d blk=%d offset=%d\n", ino, blk, offset);
-
-       get_block(dev, blk, buf);
-       ip = (INODE *)buf + offset;
-       // copy INODE to mp->INODE
-       mip->INODE = *ip;
-       return mip;
-    }
-  }   
-  printf("PANIC: no more free minodes\n");
-  return 0;
+   get_block(dev, blk, buf);
+   ip = (INODE *)buf + offset;
+   // copy INODE to mp->INODE
+   mip->INODE = *ip;
+   // initialize minode
+   mip->refCount = 1;
+   mip->mounted = 0;
+   mip->dirty = 0;
+   mip->mptr = 0;
+   return mip;
 }
 
 void iput(MINODE *mip)
@@ -142,36 +158,36 @@ int search(MINODE *mip, char *name)
    printf("search for %s in MINODE = [%d, %d]\n", name,mip->dev,mip->ino);
    ip = &(mip->INODE);
 
-   /*** search for name in mip's data blocks: ASSUME i_block[0] ONLY ***/
-
-   get_block(dev, ip->i_block[0], sbuf);
-   dp = (DIR *)sbuf;
-   cp = sbuf;
-   printf("  ino   rlen  nlen  name\n");
-
-   while (cp < sbuf + BLKSIZE){
-     strncpy(temp, dp->name, dp->name_len);
-     temp[dp->name_len] = 0;
-     printf("%4d  %4d  %4d    %s\n", 
-           dp->inode, dp->rec_len, dp->name_len, dp->name);
-     if (strcmp(temp, name)==0){
-        printf("found %s : ino = %d\n", temp, dp->inode);
-        return dp->inode;
-     }
-     cp += dp->rec_len;
-     dp = (DIR *)cp;
+   /*** search for name in mip's data blocks: ***/
+   // searching in direct blocks only
+   for (i = 0; i < 12; i++) {
+      if (mip->INODE.i_block[i] == 0) return -1;
+      get_block(dev, ip->i_block[i], sbuf);
+      dp = (DIR *)sbuf;
+      cp = sbuf;
+      printf("  ino   rlen  nlen  name\n");
+      while (cp < sbuf + BLKSIZE){
+         strncpy(temp, dp->name, dp->name_len);
+         temp[dp->name_len] = 0;
+         printf("%4d  %4d  %4d    %.*s\n", 
+            dp->inode, dp->rec_len, dp->name_len, dp->name_len, dp->name); // add .* to the print so it only prints how long the name is supposed to be (sometimes has extra chars)
+         if (strcmp(temp, name)==0){
+            //printf("found %s : ino = %d\n", temp, dp->inode);
+            return dp->inode;
+         }
+         cp += dp->rec_len;
+         dp = (DIR *)cp;
+      }
    }
    return -1;
 }
 
 int getino(char *pathname)
 {
-  int i, ino, blk, offset;
+  int i, ino;
   char buf[BLKSIZE];
-  INODE *ip;
   MINODE *mip;
 
-  printf("getino: pathname=%s\n", pathname);
   if (strcmp(pathname, "/")==0)
       return 2;
   
@@ -180,7 +196,7 @@ int getino(char *pathname)
      mip = root;
   else
      mip = running->cwd;
-
+   
   mip->refCount++;         // because we iput(mip) later
   
   tokenize(pathname);
@@ -190,7 +206,7 @@ int getino(char *pathname)
       printf("getino: i=%d name[%d]=%s\n", i, i, name[i]);
  
       ino = search(mip, name[i]);
-
+   
       if (ino==0){
          iput(mip);
          printf("\nname %s does not exist: getino failed\n", name[i]);
@@ -199,7 +215,7 @@ int getino(char *pathname)
       iput(mip);
       mip = iget(dev, ino);
    }
-
+   
    iput(mip);
    return ino;
 }
@@ -262,4 +278,51 @@ int findino(MINODE *mip, u32 *myino) // myino = i# of . return i# of ..
    * myino = mip->ino;
    dp = (DIR *) (buf + dp->rec_len);
    return dp->inode;
+}
+
+void separatePathname(char * pathname, char ** dname, char ** bname, char * command) 
+{
+   char temp_dname[128] = "", temp_bname[128] = "";
+   int n = (tokenize(pathname) - 1);
+   int i;
+
+   if (pathname[0] == '/') { // if absolute
+      printf("%s pathname %s is absolute\n", command, pathname);
+      temp_dname[0] = '/';
+   }
+
+   for (i = 0; i < n; ++i) {
+      if (i > 0) strcat(temp_dname, "/");
+      strcat(temp_dname, name[i]);
+   }
+   strcpy(temp_bname, name[i]);
+
+   if (pathname[0] != '/') { // if relative
+      printf("%s pathname %s is relative\n", command, pathname);
+      // getting cwd
+      char path[128];
+      strcpy(path, rpwd(running->cwd, 0));
+      if (strcmp(path, "/")!=0) {
+		  strcat(path, temp_dname);
+		  strcpy(temp_dname, path);
+	   }
+      else if (strcmp(temp_dname, "")==0) temp_dname[0] = '/'; // if filename is one character
+    }
+    
+    strcpy(*dname, temp_dname);
+    strcpy(*bname, temp_bname);
+}
+
+int validPathname(char * pathname) {
+   if (pathname != NULL && strcmp(pathname, "") != 0) return 1;
+   else return -1;
+}
+
+// debug command only
+int printMinnodes(int m) {
+   printf("\n%d minnodes\n", m);
+   for (int i=0; i<m; i++){
+      MINODE *mp = &minode[i];
+      printf("mp->ino: %d\nmp->refCount: %d\n", mp->ino, mp->refCount);
+   }
 }

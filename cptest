@@ -1,0 +1,16 @@
+# to use this, run ./cptest [diskimage name] [file1] [file2] 
+# and it will let you know if they differ or not
+
+sudo mount $1 /mnt
+
+(diff -q /mnt/$2 /mnt/$3)
+equal=$?
+if [[ $equal -ne 0 ]]
+then
+	echo $'\nNOT EQUAL :(\n'
+else
+	echo "Files /mnt/$2 and /mnt/$2 do not differ"
+	echo $'\nEQUAL :)\n'
+fi
+
+sudo umount /mnt

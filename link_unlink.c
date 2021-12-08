@@ -22,19 +22,28 @@ INODE *truncate_ino(INODE *i)
 int my_link(char *old_file, char *new_file)
 {
 	//var dec/init
-	char parent[1024] = "", child[1024] = "", buf[BLKSIZE];
+	char * parent = (char *)malloc(sizeof(new_file)), * child = (char *)malloc(sizeof(new_file)), buf[BLKSIZE];
 	int oino, oino2, bnum, needLen, bestLen, newRec;
 	MINODE *omip, *omip2;
 	char *cp;
 	DIR *dp;
 
+	 // check for valid pathname
+    if (validPathname(old_file) == -1) {
+      printf("\nfirst pathname is not valid: link failed\n");
+      return -1;
+    }
+	if (validPathname(new_file) == -1) {
+	printf("\nsecond pathname is not valid: link failed\n");
+      return -1;
+	}
 
 	//1 -- verify that file exists and is not a DIR
 	oino = getino(old_file);
 
 	if(oino == -1)
 	{
-		printf("\nAttention: the first file %s does not exist: link failed\n", old_file);
+		printf("\nfirst file %s does not exist: link failed\n", old_file);
 		return -1;
 	}
 	else printf("first file %s exists: passed file check\n", old_file);
@@ -44,7 +53,7 @@ int my_link(char *old_file, char *new_file)
 	//check if reg
 	if(!S_ISREG(omip->INODE.i_mode))
 	{
-		printf("\nAttention: the first file %s is not regular: link failed\n", old_file);
+		printf("\nfirst file %s is not regular: link failed\n", old_file);
 		iput(omip);
 		return -1;
 	}
@@ -53,7 +62,7 @@ int my_link(char *old_file, char *new_file)
 	//check second file
 	// see if valid
 	if (strcmp(new_file, "")==0) {
-		printf("\nAttention: the second filename is not valid: link failed\n");
+		printf("\nsecond filename is not valid: link failed\n");
 		return -1;
 	}
 	oino2 = getino(new_file);
@@ -61,44 +70,21 @@ int my_link(char *old_file, char *new_file)
 	// if valid does it exist
 	if(oino2 != -1)
 	{
-		printf("\nAttention: the second file %s already exists: link failed\n", new_file);
+		printf("\nsecond file %s already exists: link failed\n", new_file);
 		iput(omip);
 		return -1;
 	}
 	else printf("second file %s does not exist yet: passed file check\n", new_file);
 
 	// tokenizing filename to check new_file
-    int n = (tokenize(new_file) - 1);
-    int i;
-
-    for (i = 0; i < n; ++i) {
-      strcat(parent, "/");
-      strcat(parent, name[i]);
-    }
-    strcpy(child, name[i]);
-
-	if (new_file[0] == '/') { // if absolute
-		printf("link name %s is absolute\n", child);
-		if (i == 0) strcat(parent, "/");
-	}
-	else { // if relative
-      printf("link name %s is relative\n", child);
-      // getting cwd
-      char path[128];
-      strcpy(path, rpwd(running->cwd, 0));
-      if (strcmp(path, "/")!=0) {
-		  strcat(path, parent);
-		  strcpy(parent, path);
-	  }
-	  else if (strcmp(parent, "")==0) strcat(parent, "/"); // if filename is one character
-    }
+    separatePathname(new_file, &parent, &child, "link");
 
 	// checking new_file
 	oino2 = getino(parent);
 
 	if (oino2 == -1) 
 	{
-		printf("Attention: parent %s does not exist: link failed\n", parent);
+		printf("parent %s does not exist: link failed\n", parent);
 		return -1;
 	}
 	else printf("parent %s exists: passed parent check\n", parent);
@@ -108,7 +94,7 @@ int my_link(char *old_file, char *new_file)
 	//check dir parent
 	if(!S_ISDIR(omip2->INODE.i_mode))
 	{
-		printf("Attention: parent %s not a directory: link failed\n", parent);
+		printf("parent %s not a directory: link failed\n", parent);
 		iput(omip);
 		iput(omip2);
 		return -1;
@@ -136,45 +122,18 @@ int my_link(char *old_file, char *new_file)
 //when file's links_count reaches 0, the file is truly removed by deallocating its data blocks and inode
 int my_unlink(char *filename)
 {
-	//check if filename is empty, if so return 0
-	if(strlen(filename) == 0)
-	{
-		return 0;
-	}
+	// check for valid pathname
+    if (validPathname(filename) == -1) {
+      printf("\npathname is not valid: unlink failed\n");
+      return -1;
+    }
 
 	//var initialization
 	char buf[1024];
 	//int dev = 0;
 	
-	char parent[128] = "";
-	char child[128] = "";
-	
-    int n = (tokenize(filename) - 1);
-    int i;
-
-    for (i = 0; i < n; ++i) {
-      strcat(parent, "/");
-      strcat(parent, name[i]);
-    }
-    strcpy(child, name[i]);
-
-	//(1). get filename's minode
-	if (filename[0] == '/') { // if absolute
-		printf("unlink name %s is absolute\n", child);
-		if (i == 0) strcat(parent, "/");
-	}
-	else { // if relative
-      printf("unlink name %s is relative\n", child);
-      // getting cwd
-      char path[128];
-      strcpy(path, rpwd(running->cwd, 0));
-      if (strcmp(path, "/")!=0) {
-		  strcat(path, parent);
-	  	  printf("dirname: %s\n, path: %s\n", parent, path);
-		  strcpy(parent, path);
-	  }
-	  else if (strcmp(parent, "")==0) strcat(parent, "/"); // if filename is one character
-    }
+	char * parent = (char *)malloc(sizeof(filename)), * child = (char *)malloc(sizeof(filename));
+    separatePathname(filename, &parent, &child, "unlink");
 
 	int ino = getino(filename);
 	if (ino == -1) 
@@ -189,7 +148,7 @@ int my_unlink(char *filename)
 	//check if a REG or symbolic LNK file; can not be a DIR
 	if(S_ISDIR(mip->INODE.i_mode))
 	{
-		printf("Attention: %s is a DIR: unlink failed\n", child);
+		printf("%s is a DIR: unlink failed\n", child);
 		return -1;
 	}
 	else printf("%s is not a DIR: passed DIR check\n", child);
@@ -198,7 +157,7 @@ int my_unlink(char *filename)
 	//check if it exists
 	if(pino == -1)
 	{
-		printf("Attention: %s does not exist: unlink failed\n", parent);
+		printf("%s does not exist: unlink failed\n", parent);
 		return -1;
 	}
 	else printf("file %s exists: passed existing file check\n", parent);

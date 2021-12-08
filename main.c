@@ -37,6 +37,9 @@ int init()
     p->pid = i;
     p->uid = p->gid = 0;
     p->cwd = 0;
+    for (j = 0; j<NFD; j++){
+      p->fd[j] = 0;
+    }
   }
 }
 
@@ -51,6 +54,7 @@ char *disk = "diskimage";
 int main(int argc, char *argv[ ])
 {
   int ino;
+  int debug = 0;
   char buf[BLKSIZE];
   if (argc > 1) disk = argv[1];
 
@@ -94,20 +98,23 @@ int main(int argc, char *argv[ ])
   printf("root refCount = %d\n", root->refCount);
 
   // WRTIE code here to create P1 as a USER process
-  
+  printf("\n************************\n");
   while(1){
-    printf("\n[ls|cd|pwd|mkdir|creat|rmdir|link|unlink|symlink|quit]\ninput command :  ");
+    printf("\n[menu|ls|cd|pwd|mkdir|creat|rmdir|link|unlink|symlink|cat|cp|mv|rename|pfd|debug|quit]\ninput command :  ");
     fgets(line, 128, stdin);
     line[strlen(line)-1] = 0;
 
     if (line[0]==0)
        continue;
     pathname[0] = 0;
+    pathname2[0] = 0;
 
-    sscanf(line, "%s %s", cmd, pathname);
-    printf("\ncmd=%s pathname=%s\n", cmd, pathname);
-  
-    if (strcmp(cmd, "ls")==0)
+    sscanf(line, "%s %s %s", cmd, pathname, pathname2);
+    printf("\ncmd=%s pathname=%s %s\n", cmd, pathname, pathname2);
+
+    if (strcmp(cmd, "menu")==0)
+       my_menu();
+    else if (strcmp(cmd, "ls")==0)
        my_ls(pathname);
     else if (strcmp(cmd, "cd")==0)
        my_cd(pathname);
@@ -120,19 +127,58 @@ int main(int argc, char *argv[ ])
     else if (strcmp(cmd, "rmdir")==0)
        my_rmdir(pathname);
     else if (strcmp(cmd, "link")==0) {
-       sscanf(line, "%s %s %s", cmd, pathname, pathname2);
        my_link(pathname, pathname2); }
     else if (strcmp(cmd, "unlink")==0)
        my_unlink(pathname);
     else if (strcmp(cmd, "symlink")==0) {
-       sscanf(line, "%s %s %s", cmd, pathname, pathname2);
        my_symlink(pathname, pathname2); }
     else if (strcmp(cmd, "cat")==0)
        my_cat(pathname);
     else if (strcmp(cmd, "cp")==0) {
-       sscanf(line, "%s %s %s", cmd, pathname, pathname2);
        my_cp(pathname, pathname2); }
+    else if (strcmp(cmd, "mv")==0 || strcmp(cmd, "rename")==0) {
+       my_mv(pathname, pathname2); }
+    else if (strcmp(cmd, "pfd")==0)
+       my_pfd(); 
     else if (strcmp(cmd, "quit")==0)
        quit();
+    else if (strcmp(cmd, "debug")==0) {
+       debug = !debug;
+       printf("\ndebug is now %s\n", (debug ? "ON" : "OFF"));
+    }
+    else if (debug) {
+         if (strcmp(cmd, "print")==0) // print (int) -> prints out (int) minnodes
+            printMinnodes(atoi(pathname));
+         else if (strcmp(cmd, "open")==0)  // open file
+            open_file(pathname, atoi(pathname2)); 
+         else if (strcmp(cmd, "close")==0)  // close file
+            close_file(atoi(pathname));
+         else  
+            printf("\nnot valid command\n");
+    }
+    else
+      printf("\nnot valid command\n");
   }
+}
+
+int my_menu() {
+   printf("\n************************\n");
+   printf("\n[menu]\nprints out all possible commands and their descriptions\n");
+   printf("\n[ls (optional directory name)]\nprints files and directories in the current working directory by default in a long list format\n");
+   printf("\n[cd (directory name)]\nchanges the current working directory to the directory listed after this command. use ../ to go to the previous directory\n");
+   printf("\n[pwd]\nprints the current working directory\n");
+   printf("\n[mkdir (new directory name)]\nmakes a new directory\n");
+   printf("\n[creat (new file name)]\ncreates a new file in the current working directory\n");
+   printf("\n[rmdir (directory name to remove)]\nremoves an empty directory\n");
+   printf("\n[link (filename1) (filename2)]\nhard links filename2 to filename1\n");
+   printf("\n[unlink (filename)]\nunlinks filename\n");
+   printf("\n[symlink (name1) (name2)]\nsoft links name2 to name1\n");
+   printf("\n[cat (filename)]\nprints contents of filename\n");
+   printf("\n[cp (src) (dest)]\ncopies src to dest\n");
+   printf("\n[mv (src) (dest)]\nmoves src to dest\n");
+   printf("\n[rename (src) (dest)]\renames src to dest\n");
+   printf("\n[pfd]\nprints out currently open files\n");
+   printf("\n[debug]\nuse commands like open, close\n");
+   printf("\n[quit]\nquits application\n");
+   printf("\n************************\n");
 }
