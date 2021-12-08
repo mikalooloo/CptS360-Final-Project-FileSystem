@@ -16,14 +16,13 @@ int mount()
 	if(strcmp(pathname, "") == 0)
 	{
 		//display current mounted filesystems
-		//num_mount is number of systems mounted
-		int num_mount; //TO DO: edit initialization
+		//NMOUNT is number of systems mounted
 		printf("File systems currently mounted: \n");
-		for(i = 0; i < num_mount; i++)
+		for(i = 0; i < NMOUNT; i++)
 		{
-			if(mountTable[i].dev)
+			if(mtable[i].dev)
 			{
-				printf("/t%s\t%s\n", mountTable[i].name, mountTable[i].mount_name);
+				printf("/t%s\t%s\n", mtable[i].name, mtable[i].mount_name);
 			}
 		}
 		return 0;
@@ -35,18 +34,18 @@ int mount()
 	//   else: allocate a free MOUNT table entry (dev = 0 means FREE).
 	
 	//searching through mount array
-	for(i = 0; i < num_mount; i++)
+	for(i = 0; i < NMOUNT; i++)
 	{
 		//if already mounted reject
-		if(mountTable[i].dev && !strcmp(mountTable[i].name, pathname))
+		if(mtable[i].dev && !strcmp(mtable[i].name, pathname))
 		{
 			printf("Attention: the filesystem is already mounted!\n");
 			return;
 		}
 		//else, allocate a free MOUNT table entry
-		else if(mountTable[i].dev == 0)
+		else if(mtable[i].dev == 0)
 		{
-			mntptr = &(mountTable[i]);
+			mntptr = &(mtable[i]);
 		}
 	}
 
@@ -121,19 +120,52 @@ int mount()
 
 int umount(char *filesys)
 {
+	int i, j, count = 0;
+
+	MOUNT* umnt = 0;
+
 	//1. search the MOUNT table to check filesys is indeed mounted
-	//
+	
+	for(i = 0; i < NMOUNT; i++)
+	{
+		if(strcmp(mtable[i].name, filesys) == 0)
+		{
+			count++;
+			break;
+		}
+	}
+	//not mounted
+	if(count == 0)
+	{
+		printf("Attention: %s is not mounted!\n", filesys);
+		return -1;
+	}
+
 	//2. check whether any file is still active in the mounted filesys;
 	//	e.g. someone's CWD or opened files are still there,
 	//   if so, the mounted filesys is BUSY ==> cannot be umounted yet.
 	//   HOW to check? Ans: by checking all minode[].dev
 	//
+	//compare cwd->dev to MINODE->devs
+	for(j = 0; j < NMINODE; j++)
+	{
+		if(minode[j].refCount && minode[j].mounted && (minode[j].mountptr->dev == umnt->dev))
+		{
+			close(umnt->dev);
+			minode[j].mountptr = 0;
+			iput(&minode[j]);
+			umnt->mounted_inode = 0;
+			umnt->dev = 0;
+			break;
+		}
+	}
+		
 	//3. find the mount_point's inode (which should be in mem while its mounted on)
 	//   reset it to "not mounted"
 	//   then iput() the minode (bc it was iget()ed during mounting)
 	//
 	//4. return 0 for success
-	
+	return 0;
 
 }	
  
