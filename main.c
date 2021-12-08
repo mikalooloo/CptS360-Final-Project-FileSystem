@@ -17,6 +17,9 @@ int fd, dev;
 int nblocks, ninodes, bmap, imap, iblk;
 char line[128], cmd[32], pathname[128], pathname2[128];
 
+MOUNT mountTable[8]; //set all dev = 0 in init()
+
+
 int init()
 {
   int i, j;
@@ -44,11 +47,14 @@ int init()
 }
 
 // load root INODE and set root pointer to it
+// TO DO: Modification: mountTable[0] has been used to record dev, ninodes, nblocks, bmap, impap, iblk, of root device
 int mount_root()
 {  
   printf("mount_root()\n");
   root = iget(dev, 2);
 }
+
+//TO DO: write a MOUNT *getmptr(int dev) function, which returns a pointer to dev's mountTable[] entry
 
 char *disk = "diskimage";
 int main(int argc, char *argv[ ])
