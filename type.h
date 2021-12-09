@@ -32,6 +32,7 @@ DIR   *dp;
 #define NMINODE   128
 #define NPROC       2
 #define NFD        16
+#define NMOUNT      8
 
 typedef struct minode{
   INODE INODE;           // INODE structure on disk
@@ -40,7 +41,7 @@ typedef struct minode{
   int dirty;             // 0 for clean, 1 for modified
 
   int mounted;           // for level-3
-  struct mntable *mptr;  // for level-3
+  struct Mount *mptr;  // for level-3
 }MINODE;
 
 // Open file Table // opened file instance
@@ -62,21 +63,6 @@ typedef struct proc
     OFT *fd[NFD];
 } PROC;
 
-// Mount Table structure
-  typedef struct mtable{
-  int dev; // device number; 0 for FREE
-  int ninodes; // from superblock
-  int nblocks;
-  int free_blocks; // from superblock and GD
-  int free_inodes;
-  int bmap; // from group descriptor
-  int imap;
-  int iblock; // inodes start block
-  MINODE *mntDirPtr; // mount point DIR pointer
-  char devName[64]; //device name
-  char mntName[64]; // mount point DIR name
-}MTABLE;
-
 //Mount Table structure
 typedef struct Mount{
 	int dev; //dev (opened vdisk fd number) 0 means FREE
@@ -85,7 +71,7 @@ typedef struct Mount{
 	int bmap; //from GD block
 	int imap;
 	int blk;
-	struct Minode *mounted_inode;
+	MINODE *mounted_inode;
 	char name[64]; //device name, e.g. mydisk
 	char mount_name[64]; //mounted DIR pathname;
 }MOUNT;
