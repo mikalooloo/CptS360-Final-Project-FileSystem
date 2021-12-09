@@ -44,7 +44,7 @@ int read_file(int fd, int nbytes);
 int write_file(int fd, int nbytes);
 int mymv(char * src, char * dest);
 // MISC LEVEL 3
-
+MOUNT * getmptr(int dev);
 
 // command helper functions
 int enter_name(MINODE * pip, int ino, char * basename);
@@ -57,5 +57,6 @@ int myread(int fd, char buf[], int nbytes);
 
 // debug
 int printMinnodes(int m);
+int debug_menu();
 
 #endif
