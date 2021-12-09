@@ -60,13 +60,14 @@ int mount_root()
   root = iget(dev, 2);
   MOUNT * mptr = &mountTable[0];
   mptr->dev = dev;
-  mptr->ninodes = sp->s_inodes_count;
-  mptr->nblocks = sp->s_blocks_count;
-  mptr->bmap = gp->bg_block_bitmap;
-  mptr->imap = gp->bg_inode_bitmap;
-  mptr->blk = gp->bg_inode_table;
+  mptr->ninodes = ninodes;
+  mptr->nblocks = nblocks;
+  mptr->bmap = bmap;
+  mptr->imap = imap;
+  mptr->blk = iblk;
   mptr->mounted_inode = root;
   root->mptr = mptr;
+  root->mounted = 1;
   strcpy(mptr->name,"/");
   strncpy(mptr->mount_name, disk, NLENGTH); 
   // set proc's CWD
