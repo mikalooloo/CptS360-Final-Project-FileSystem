@@ -7,28 +7,27 @@ extern MINODE minode[NMINODE];
 extern PROC   proc[NPROC], *running;
 extern GD    *gp;
 
-int my_mount(char * pathname, char * filesys)
+int my_mount(char * filesys, char * pathname)
 {
 	//variable declaration
 	int i, fd, dev, ino;
 	MINODE *mip;
-	MOUNT *mntptr;
-	int mnti;
+	MOUNT *mptr; int mi;
 	char buf[BLKSIZE];
 	SUPER *ext;
 
 	//1. ask for a filesys (a virtual disk) amd mount_point (a DIR pathname).
 	//   if no parameters: display current mounted filesystems
-	if(strcmp(pathname, "") == 0)
+	if(strcmp(filesys, "") == 0 || strcmp(pathname, "") == 0)
 	{
 		//display current mounted filesystems
 		//NMOUNT is number of systems mounted
-		printf("File systems currently mounted: \n");
+		printf("\ncurrently mounted filesystems:\n");
 		for(i = 0; i < NMOUNT; i++)
 		{
 			if(mountTable[i].dev)
 			{
-				printf("/t%s\t%s\n", mountTable[i].name, mountTable[i].mount_name);
+				printf("%s mounted on %s wth dev %d\n", mountTable[i].mount_name, mountTable[i].name, mountTable[i].dev);
 			}
 		}
 		return 0;
@@ -43,42 +42,47 @@ int my_mount(char * pathname, char * filesys)
 	for(i = 0; i < NMOUNT; i++)
 	{
 		//if already mounted reject
-		if(mountTable[i].dev && !strcmp(mountTable[i].name, pathname))
+		if(mountTable[i].dev && !strcmp(mountTable[i].mount_name, filesys))
 		{
-			printf("Attention: the filesystem is already mounted!\n");
+			printf("\n%s is already mounted: mount failed\n", filesys);
 			return -1;
 		}
 		//else, allocate a free MOUNT table entry
 		else if(mountTable[i].dev == 0)
 		{
-			mnti = i;
-			mntptr = &(mountTable[mnti]);
+			mi = i;
+			mptr = &(mountTable[mi]);
 		}
 	}
+	printf("%s was not already mounted: mount check passed\n", filesys);
 
-	if (mnti == -1) {
+	if (mi == -1) {
 		printf("\ndid not allocate a free MOUNT table entry: mount failed\n");
 		return -1;
 	}
+	else printf("successfully allocated a free MOUNT table entry: free check passed\n");
 
 	//3. LINUX open filesys for RW; use its fd number as the new DEV;
 	//   check whether its an EXT2 file system: if not reject.
 	
-	fd = open(pathname, O_RDWR);
+	fd = open(filesys, O_RDWR);
 	if(fd == -1) {
-		printf("Attention: Invalid file descriptor!\n");
+		printf("\n%s failed to open with fd %d: mount failed\n", filesys, fd);
 		return -1;
 	}
+	else printf("%s opened correctly with fd %d: open check passed\n", filesys, fd);
 
+	printf("\nrunning->cwd->dev: %d, new dev: %d\n", running->cwd->dev, fd);
 	dev = fd;
     get_block(fd, 1, buf);
     ext = (SUPER*)buf;
 
 	//check if EXT2 file system, if not then reject
     if(ext->s_magic != 0xEF53) {
-		printf("Attention: Not an EXT2 Filesystem!!\n");
+		printf("\next is not an EXT2 Filesystem: mount failed\n");
 		return -1;
 	}
+	else printf("ext is an EXT2 Filesystem: system check passed\n");
 	
 
 	//4. for mount_point: find its ino, then get its minode:
@@ -86,7 +90,14 @@ int my_mount(char * pathname, char * filesys)
 	//	mip = iget(dev, ino); //get minode in memory;
 	
 	ino = getino(pathname); //get ino
-	mip = iget(dev, ino); //get minode into memory
+
+	if (ino == -1) {
+		printf("\n%s does not exist: mount failed\n", pathname);
+		return -1;
+	}
+	else printf("%s does exist: existence check passed\n", pathname);
+
+	mip = iget(running->cwd->dev, ino); //get minode into memory
 
 	//5. check mount_point is a DIR
 	//   check mount_point is NOT busy (e.g. can't be someone's CWD)
@@ -94,44 +105,48 @@ int my_mount(char * pathname, char * filesys)
 	//check if mount_point is DIR
 	if(!S_ISDIR(mip->INODE.i_mode))
 	{
-		printf("Attention: Invalid mount point!\n");
-		return 0;
+		printf("\n%s is not a DIR: mount failed\n", pathname);
+		return -1;
 	}
+	else printf("%s is a DIR: DIR check passed\n", pathname);
 	
 	//check if mount_point is not busy
-	if(running->cwd->dev == mip->dev)
+	//if (mip->refCount > 2) // if(running->cwd->dev == mip->dev)
+	for (i = 0; i < NPROC; i++)
 	{
-		printf("Attention: mount point is not busy, directory is busy\n");
-		return 0;
+		if (proc[i].cwd == mip) { // making sure it isn't someone else's CWD
+			printf("\nDIR %s is busy: mount failed\n", pathname);
+			return -1;
+		}
 	}
+	printf("DIR %s is not busy: busy check passed\n", pathname);
 
 	//
 	//6. allocate a FREE (dev = 0) mountTable[] for newdev;
 	//   record new DEV, ninodes, nblocks, bmap, imap, iblk in mountTable[]
 	
-	mntptr->dev = dev;
-	strcpy(mntptr->name, pathname);
-	strcpy(mntptr->mount_name, filesys);
-	mntptr->ninodes = ext->s_inodes_count;
-	mntptr->nblocks = ext->s_blocks_count;
-	get_block(mntptr->dev, 2, buf);
+	mptr->dev = dev;
+	strncpy(mptr->name, pathname, NLENGTH);
+	strncpy(mptr->mount_name, filesys, NLENGTH);
+	mptr->ninodes = ext->s_inodes_count;
+	mptr->nblocks = ext->s_blocks_count;
+	get_block(mptr->dev, 2, buf);
 	// global var
 	gp = (GD *)buf;
-	mntptr->bmap = gp->bg_block_bitmap;
-	mntptr->imap = gp->bg_inode_bitmap;
-	mntptr->blk = gp->bg_inode_table;
+	mptr->bmap = gp->bg_block_bitmap;
+	mptr->imap = gp->bg_inode_bitmap;
+	mptr->blk = gp->bg_inode_table;
 
 	//7. mark mount_point's as being mounted on and let it point at the MOUNT table entry,
 	//   which points back to the mount_point minode.
 	mip->mounted = 1;
-	mip->mptr = mntptr;
-	mntptr->mounted_inode = mip;
-	// mntptr->mounted_inode = iget(dev, ROOT_INODE);
-	//return 0 for success
-	//
+	mip->dirty = 1;
+	mip->mptr = mptr;
+	mptr->mounted_inode = mip;
 	
-	return 0;
-	
+	// return 1 for success
+	printf("\nmount successful\n");
+	return 1;
 }
 
 int my_umount(char *filesys)
@@ -180,9 +195,10 @@ int my_umount(char *filesys)
 	//   reset it to "not mounted"
 	//   then iput() the minode (bc it was iget()ed during mounting)
 	//
-	//4. return 0 for success
-	return 0;
 
+	//4. return 1 for success
+	printf("\numount successful\n");
+	return 1;
 }	
  
 
