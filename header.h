@@ -15,6 +15,7 @@ int findmyname(MINODE *parent, u32 myino, char myname[ ]) ;
 int findino(MINODE *mip, u32 *myino);
 void separatePathname(char * pathname, char ** dname, char ** bname, char * command);
 int validPathname(char * pathname);
+int access(char * filename, char mode);
 
 // my_command functions
 // LEVEL 1
@@ -45,6 +46,7 @@ int write_file(int fd, int nbytes);
 int mymv(char * src, char * dest);
 // MISC LEVEL 3
 MOUNT * getmptr(int dev);
+int cs();
 
 // command helper functions
 int enter_name(MINODE * pip, int ino, char * basename);
