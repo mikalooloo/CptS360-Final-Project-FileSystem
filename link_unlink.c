@@ -46,7 +46,7 @@ int my_link(char *old_file, char *new_file)
 		printf("\nfirst file %s does not exist: link failed\n", old_file);
 		return -1;
 	}
-	else printf("first file %s exists: passed file check\n", old_file);
+	else printf("first file %s exists: file check passed\n", old_file);
 
 	omip = iget(dev, oino);
 
@@ -57,7 +57,7 @@ int my_link(char *old_file, char *new_file)
 		iput(omip);
 		return -1;
 	}
-	else printf("first file %s is regular: passed reg check\n", old_file);
+	else printf("first file %s is regular: reg check passed\n", old_file);
 
 	//check second file
 	// see if valid
@@ -74,7 +74,7 @@ int my_link(char *old_file, char *new_file)
 		iput(omip);
 		return -1;
 	}
-	else printf("second file %s does not exist yet: passed file check\n", new_file);
+	else printf("second file %s does not exist yet: file check passed\n", new_file);
 
 	// tokenizing filename to check new_file
     separatePathname(new_file, &parent, &child, "link");
@@ -87,7 +87,7 @@ int my_link(char *old_file, char *new_file)
 		printf("parent %s does not exist: link failed\n", parent);
 		return -1;
 	}
-	else printf("parent %s exists: passed parent check\n", parent);
+	else printf("parent %s exists: parent check passed\n", parent);
 
 	omip2 = iget(omip->dev, oino2);
 
@@ -99,7 +99,7 @@ int my_link(char *old_file, char *new_file)
 		iput(omip2);
 		return -1;
 	}
-	else printf("parent %s is a DIR: passed DIR check\n", parent);
+	else printf("parent %s is a DIR: DIR check passed\n", parent);
 
 	// make new_file
 	enter_name(omip2, oino, child);
@@ -141,7 +141,7 @@ int my_unlink(char *filename)
 		printf("\nc%s does not exist: unlink failed\n", filename);
 		return -1;
 	}
-	else printf("%s exists: passed existing file check\n", filename);
+	else printf("%s exists: existing file check passed\n", filename);
 
 	MINODE * mip = iget(dev, ino);
 
@@ -151,7 +151,7 @@ int my_unlink(char *filename)
 		printf("%s is a DIR: unlink failed\n", child);
 		return -1;
 	}
-	else printf("%s is not a DIR: passed DIR check\n", child);
+	else printf("%s is not a DIR: DIR check passed\n", child);
 
 	int pino = getino(parent);
 	//check if it exists
@@ -160,7 +160,7 @@ int my_unlink(char *filename)
 		printf("%s does not exist: unlink failed\n", parent);
 		return -1;
 	}
-	else printf("file %s exists: passed existing file check\n", parent);
+	else printf("file %s exists: existing file check passed\n", parent);
 	
 	MINODE * pmip = iget(dev, pino);
 
