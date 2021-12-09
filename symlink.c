@@ -63,7 +63,7 @@ int my_symlink(char *old_file, char *new_file)
 	else printf("%s exists: creat check passed\n", new_file);
 
 	MINODE * mip = iget(dev, ino2);
-	mip->INODE.i_mode = 0120000; // setting to lnk type
+	mip->INODE.i_mode = 0xA1ED; // setting to lnk type
 	mip->dirty = 1;
 	//copy name
 	strcpy((char*) mip->INODE.i_block, old_file);
