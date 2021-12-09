@@ -169,7 +169,7 @@ int myread(int fd, char buf[], int nbytes)
 				break;
 			}
 		}*/
-		
+
 		//get data block into readbuf
 		get_block(mip->dev, blk, readbuf);
 
@@ -199,21 +199,16 @@ int myread(int fd, char buf[], int nbytes)
 
 }
 
-int read_file(char *pathname)
+int read_file(int fd, int nbytes)
 {
 	//preparations:
 	//assume file is opened for RD or RW
 	//ask for a fd and nbytes to read
 	//verify that fd is indeed opened for RD and RW
 	//return (myread(fd, buf, nbytes))
-	
-	//declare path, and second path chars
-	char path[256], second_path[256];
-	//split_paths(pathname, path, second_path);
 
 	//from bytes to int
-	int nbytes = atoi(second_path), actual = 0;
-	int fd = 0;
+	int actual = 0;
 	OFT *oftp;
 	INODE *pip;
 	MINODE *pmip;
@@ -226,16 +221,13 @@ int read_file(char *pathname)
 	strcpy(buf, "");
 
 	//check fd
-	if(!strcmp(pathname, ""))
+	if(fd == 0)
 	{
 		printf("Attebtion: no fd!\n");
 		return 0;
 	}
 
-	//convert fd into int
-	fd = atoi(pathname);
-
-	if(!strcmp(second_path, ""))
+	if(nbytes == 0)
 	{
 		printf("Attention: no bytes!\n");
 		return 0;
@@ -247,7 +239,6 @@ int read_file(char *pathname)
 	//check actual
 	if(actual == -1)
 	{
-		strcpy(second_path, "");
 		return 0;
 	}
 
