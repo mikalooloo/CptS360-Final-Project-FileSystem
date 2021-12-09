@@ -31,7 +31,7 @@ int my_symlink(char *old_file, char *new_file)
 		printf("\nAttention: %s does not exist: symlink failed\n", old_file);
 		return -1;
 	}
-	else printf("%s does exist: passed existence check\n", old_file);
+	else printf("%s does exist: existence check passed\n", old_file);
 
 	//MINODE * old_mip = iget(dev, old_ino);
 
@@ -49,7 +49,7 @@ int my_symlink(char *old_file, char *new_file)
 		printf("\nAttention: %s already exists: symlink failed\n", new_file);
 		return -1;
 	}
-	else printf("%s does not yet exist: passed existence check\n", new_file);
+	else printf("%s does not yet exist: existence check passed\n", new_file);
 
 	
 	//(2). creat new_file: change new_file to LNK type
@@ -60,7 +60,7 @@ int my_symlink(char *old_file, char *new_file)
 		printf("\nAttention: %s creat failed: symlink failed\n", new_file);
 		return -1;
 	}
-	else printf("%s exists: passed creat check\n", new_file);
+	else printf("%s exists: creat check passed\n", new_file);
 
 	MINODE * mip = iget(dev, ino2);
 	mip->INODE.i_mode = 0120000; // setting to lnk type
