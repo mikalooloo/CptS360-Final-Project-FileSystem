@@ -152,13 +152,13 @@ int main(int argc, char *argv[ ])
     else if (strcmp(cmd, "umount")==0) // LEVEL 3: UMOUNT
        my_umount(pathname);
     else if (strcmp(cmd, "mv")==0 || strcmp(cmd, "rename")==0)  // MISC [LEVEL 2]: MV, RENAME
-       my_mv(pathname, pathname2); 
+       mymv(pathname, pathname2); 
     else if (strcmp(cmd, "open")==0) // MISC [LEVEL 2]: OPEN
        open_file(pathname, atoi(pathname2));
     else if (strcmp(cmd, "close")==0)  // MISC [LEVEL 2]: CLOSE
        close_file(atoi(pathname));
     else if (strcmp(cmd, "pfd")==0)  // MISC [LEVEL 2]: PFD
-       pfd(); 
+       mypfd(); 
     else if (strcmp(cmd, "read")==0) // MISC [LEVEL 2]: READ
        read_file(atoi(pathname), atoi(pathname2));
     else if (strcmp(cmd, "write")==0) // MISC [LEVEL 2]: WRITE

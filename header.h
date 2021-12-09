@@ -39,7 +39,7 @@ int quit();
 // MISC LEVEL 2
 int open_file(char * pathname, int mode);
 int close_file(int fd);
-int pfd();
+int mypfd();
 int read_file(int fd, int nbytes);
 int write_file(int fd, int nbytes);
 int mymv(char * src, char * dest);

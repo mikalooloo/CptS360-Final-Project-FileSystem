@@ -163,7 +163,7 @@ int write_file(int fd, int nbytes)
      return(mywrite(fd, buf, nbytes));
 }
 
-int my_mv(char * src, char * dest)
+int mymv(char * src, char * dest)
 {
     // move file
     // check for valid pathname

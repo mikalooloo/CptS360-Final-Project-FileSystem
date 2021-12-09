@@ -67,7 +67,7 @@ int mylseek(int fd, int position)
   // return originalPosition
 }
 
-int my_pfd() // returns number of files open too
+int mypfd() // returns number of files open too
 {
   /* This function displays the currently opened files as follows:
 
