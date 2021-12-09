@@ -33,7 +33,7 @@ int my_cd(char * pathname)
     printf("\n%s is not a DIR: cd failed\n", pathname);
     return -1;
   }
-  else printf("%s is a DIR: passed DIR check\n", pathname);
+  else printf("%s is a DIR: DIR check passed\n", pathname);
 
   // (4). iput(running->cwd); // release old cwd
   iput(running->cwd);
@@ -159,14 +159,14 @@ char * rpwd(MINODE *wd, int print) {
   // (2). from wd->INODE.i_block[0], get my_ino and parent_ino
   int my_ino;
   int parent_ino;
-  parent_ino = findino(wd, &my_ino);
+  parent_ino = findino(wd, &my_ino); // findino() gets i_block[0] from wd
 
   // (3). pip = iget(dev, parent_ino);
   MINODE * pip = iget(dev, parent_ino);
-
+  if (pip == root) printf("hello\n");
   // (4). from pip->INODE.i_block[ ]: get my_name string by my_ino as LOCAL
   char my_name[256];
-  findmyname(pip, my_ino, my_name);
+  findmyname(pip, my_ino, my_name); // finds name and copies it into my_name
 
   // (5). rpwd(pip); // recursive call rpwd(pip) with parent minode
   printf("\n");
