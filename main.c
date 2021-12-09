@@ -17,7 +17,7 @@ int fd, dev;
 int nblocks, ninodes, bmap, imap, iblk;
 char line[128], cmd[32], pathname[128], pathname2[128];
 
-MOUNT mountTable[8]; //set all dev = 0 in init()
+MOUNT mountTable[NMOUNT]; // in init() all dev are set to 0
 
 
 int init()
@@ -25,17 +25,18 @@ int init()
   int i, j;
   MINODE *mip;
   PROC   *p;
+  MOUNT * mntptr;
 
   printf("init()\n");
 
-  for (i=0; i<NMINODE; i++){
+  for (i=0; i<NMINODE; i++){ // setting minode[] to 0
     mip = &minode[i];
     mip->dev = mip->ino = 0;
     mip->refCount = 0;
     mip->mounted = 0;
     mip->mptr = 0;
   }
-  for (i=0; i<NPROC; i++){
+  for (i=0; i<NPROC; i++){ // setting proc[] to 0
     p = &proc[i];
     p->pid = i;
     p->uid = p->gid = 0;
@@ -43,6 +44,10 @@ int init()
     for (j = 0; j<NFD; j++){
       p->fd[j] = 0;
     }
+  }
+  for (i=0; i < NMOUNT; i++){ // setting mountTable[] dev to 0
+     mntptr = &mountTable[i];
+     mntptr->dev = 0;
   }
 }
 
@@ -106,7 +111,7 @@ int main(int argc, char *argv[ ])
   // WRTIE code here to create P1 as a USER process
   printf("\n************************\n");
   while(1){
-    printf("\n[menu|ls|cd|pwd|mkdir|creat|rmdir|link|unlink|symlink|cat|cp|mv|rename|pfd|debug|quit]\ninput command :  ");
+    printf("\nLevel 1: [ls|cd|pwd|mkdir|creat|rmdir|link|unlink|symlink]\nLevel 2: [cat|cp]\nLevel 3: [mount|umount]\nMisc:    [menu|open|close|pfd|read|write|mv|rename|debug|quit]\ninput command :  ");
     fgets(line, 128, stdin);
     line[strlen(line)-1] = 0;
 
@@ -118,45 +123,55 @@ int main(int argc, char *argv[ ])
     sscanf(line, "%s %s %s", cmd, pathname, pathname2);
     printf("\ncmd=%s pathname=%s %s\n", cmd, pathname, pathname2);
 
-    if (strcmp(cmd, "menu")==0)
-       my_menu();
-    else if (strcmp(cmd, "ls")==0)
+    if (strcmp(cmd, "menu")==0) // MISC: MENU
+       menu();
+    else if (strcmp(cmd, "ls")==0) // LEVEL 1: LS
        my_ls(pathname);
-    else if (strcmp(cmd, "cd")==0)
+    else if (strcmp(cmd, "cd")==0) // LEVEL 1: CD
        my_cd(pathname);
-    else if (strcmp(cmd, "pwd")==0)
+    else if (strcmp(cmd, "pwd")==0) // LEVEL 1: PWD
        my_pwd(running->cwd);
-    else if (strcmp(cmd, "mkdir")==0)
+    else if (strcmp(cmd, "mkdir")==0) // LEVEL 1: MKDIR
        my_mkdir(pathname);
-    else if (strcmp(cmd, "creat")==0)
+    else if (strcmp(cmd, "creat")==0) // LEVEL 1: CREAT
        my_creat(pathname);
-    else if (strcmp(cmd, "rmdir")==0)
+    else if (strcmp(cmd, "rmdir")==0) // LEVEL 1: RMDIR
        my_rmdir(pathname);
-    else if (strcmp(cmd, "link")==0) {
-       my_link(pathname, pathname2); }
-    else if (strcmp(cmd, "unlink")==0)
+    else if (strcmp(cmd, "link")==0) // LEVEL 1: LINK
+       my_link(pathname, pathname2); 
+    else if (strcmp(cmd, "unlink")==0) // LEVEL 1: UNLINK
        my_unlink(pathname);
-    else if (strcmp(cmd, "symlink")==0) {
-       my_symlink(pathname, pathname2); }
-    else if (strcmp(cmd, "cat")==0)
+    else if (strcmp(cmd, "symlink")==0) // LEVEL 1: SYMLINK
+       my_symlink(pathname, pathname2);
+    else if (strcmp(cmd, "cat")==0) // LEVEL 2: CAT
        my_cat(pathname);
-    else if (strcmp(cmd, "cp")==0) {
-       my_cp(pathname, pathname2); }
-    else if (strcmp(cmd, "mv")==0 || strcmp(cmd, "rename")==0) {
-       my_mv(pathname, pathname2); }
-    else if (strcmp(cmd, "pfd")==0)
-       my_pfd(); 
-    else if (strcmp(cmd, "quit")==0)
+    else if (strcmp(cmd, "cp")==0) // LEVEL 2: CP
+       my_cp(pathname, pathname2); 
+    else if (strcmp(cmd, "mount")==0) // LEVEL 3: MOUNT
+       my_mount(pathname, pathname2);
+    else if (strcmp(cmd, "umount")==0) // LEVEL 3: UMOUNT
+       my_umount(pathname);
+    else if (strcmp(cmd, "mv")==0 || strcmp(cmd, "rename")==0)  // MISC [LEVEL 2]: MV, RENAME
+       my_mv(pathname, pathname2); 
+    else if (strcmp(cmd, "open")==0) // MISC [LEVEL 2]: OPEN
+       open_file(pathname, atoi(pathname2));
+    else if (strcmp(cmd, "close")==0)  // MISC [LEVEL 2]: CLOSE
+       close_file(atoi(pathname));
+    else if (strcmp(cmd, "pfd")==0)  // MISC [LEVEL 2]: PFD
+       pfd(); 
+    else if (strcmp(cmd, "read")==0) // MISC [LEVEL 2]: READ
+       read_file(atoi(pathname), atoi(pathname2));
+    else if (strcmp(cmd, "write")==0) // MISC [LEVEL 2]: WRITE
+       write_file(atoi(pathname), atoi(pathname2));
+    else if (strcmp(cmd, "quit")==0)  // MISC: QUIT
        quit();
-    else if (strcmp(cmd, "debug")==0) {
+    else if (strcmp(cmd, "debug")==0) { // MISC: DEBUG
        debug = !debug;
        printf("\ndebug is now %s\n", (debug ? "ON" : "OFF"));
     }
-    else if (debug) {
+    else if (debug) { // DEBUG COMMANDS
          if (strcmp(cmd, "print")==0) // print (int) -> prints out (int) minnodes
             printMinnodes(atoi(pathname));
-         else if (strcmp(cmd, "open")==0)  // open file
-            open_file(pathname, atoi(pathname2)); 
          else if (strcmp(cmd, "close")==0)  // close file
             close_file(atoi(pathname));
          else  
@@ -167,7 +182,7 @@ int main(int argc, char *argv[ ])
   }
 }
 
-int my_menu() {
+int menu() {
    printf("\n************************\n");
    printf("\n[menu]\nprints out all possible commands and their descriptions\n");
    printf("\n[ls (optional directory name)]\nprints files and directories in the current working directory by default in a long list format\n");
