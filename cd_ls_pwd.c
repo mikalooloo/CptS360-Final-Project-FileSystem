@@ -2,6 +2,7 @@
 
 extern int dev;
 extern MINODE minode[NMINODE];
+extern MOUNT mountTable[NMOUNT];
 extern PROC   proc[NPROC], *running;
 extern MINODE *root;
 char *t1 = "xwrxwrxwr-------";
@@ -156,18 +157,34 @@ char * rpwd(MINODE *wd, int print) {
   if (wd == root) {
     return "/";
   }
+
   // (2). from wd->INODE.i_block[0], get my_ino and parent_ino
   int my_ino;
   int parent_ino;
-  parent_ino = findino(wd, &my_ino); // findino() gets i_block[0] from wd
+  parent_ino = findino(wd, &my_ino); // findino() gets i_block[0] from wd to get parent and my_ino
 
+  if (wd->ino == root->ino && root->dev != dev) { // if the right ino but the wrong dev
+    for (int i = 0; i < NMOUNT; i++) { // look through mountTable
+      MOUNT * mptr = &mountTable[i];
+      if (mptr->mounted_inode) {
+        if (mptr->mounted_inode->ino != root->ino) { // is a mounted inode the same dev as the root?
+          if (print) printf("/%s", mptr->name); // you found your mounted inode, so either print
+          else { // or return according to print
+            char * temp = (char *)malloc(sizeof(64));
+            strcpy(temp, "/"); strcat(temp,mptr->name);
+            return strcat(temp,"/");
+          }
+          return "/";
+        }
+      }
+    }
+  }
+  
   // (3). pip = iget(dev, parent_ino);
   MINODE * pip = iget(dev, parent_ino);
-  if (pip == root) printf("hello\n");
   // (4). from pip->INODE.i_block[ ]: get my_name string by my_ino as LOCAL
   char my_name[256];
   findmyname(pip, my_ino, my_name); // finds name and copies it into my_name
-
   // (5). rpwd(pip); // recursive call rpwd(pip) with parent minode
   printf("\n");
   char * temp = rpwd(pip, print);
