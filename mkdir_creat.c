@@ -53,17 +53,17 @@ int ialloc(int dev)  // allocate an inode number from inode_bitmap
 
   // read inode_bitmap block
   get_block(dev, mptr->imap, buf);
-
   for (i=0; i < mptr->ninodes; i++){
     if (tst_bit(buf, i)==0){
         set_bit(buf, i);
         put_block(dev, mptr->imap, buf);
         decFreeInodes(dev);
-        printf("allocated ino = %d\n", i+1); // bits count from 0; ino from 1
+        //printf("allocated ino = %d\n", i+1); // bits count from 0; ino from 1
         return i+1;
     }
   }
-  return 0;
+  printf("did not allocate an inode number: ialloc failed\n");
+  return -1;
 }
 
 int balloc(int dev) 
@@ -82,6 +82,9 @@ int balloc(int dev)
       return i + 1;
     }
   }
+
+  printf("did not allocate a block number: balloc failed\n");
+  return -1;
 }
 // meat of the bones here
 
@@ -138,14 +141,13 @@ int enter_name(MINODE * pip, int ino, char * name) {
       strncpy(dp->name, name, dp->name_len); // setting name
 
       put_block(dev, blk, buf);
-      return 0;
+      return 1;
     }
     else { // no space in existing data blocks
       // Allocate a new data block; increment parent size by BLKSIZE;
       // Enter new entry as the first entry in the new data block with rec_len¼BLKSIZE.
-      pip->INODE.i_size += BLKSIZE;
-      blk = balloc(dev);
-      pip->INODE.i_block[i] = blk;
+      pip->INODE.i_size = BLKSIZE;
+      pip->INODE.i_block[i] = blk = balloc(dev);
       pip->dirty = 1;
 
       get_block(dev, blk, buf);
@@ -158,10 +160,12 @@ int enter_name(MINODE * pip, int ino, char * name) {
       strncpy(dp->name, name, dp->name_len); // setting name
 
       put_block(dev, blk, buf);
-      return 0;
+      return 1;
     }
   }
 
+  printf("enter_name appears to have failed\n");
+  return -1;
 }
 
 int kmkdir(MINODE * pmip, char * basename) {
@@ -191,7 +195,6 @@ int kmkdir(MINODE * pmip, char * basename) {
   //(4).3. make data block 0 of INODE to contain . and .. entries;
   char buf[BLKSIZE];
   bzero(buf, BLKSIZE); // optional: clear buf[ ] to 0
-
   get_block(dev, blk, buf);
   DIR *dp = (DIR *)buf;
   char *cp = buf;
@@ -210,7 +213,6 @@ int kmkdir(MINODE * pmip, char * basename) {
   dp->name[0] = dp->name[1] = '.';
   put_block(dev, blk, buf); // write to blk on diks
   // write to disk block blk.
-  
   // (4).4. enter_child(pmip, ino, basename); which enters (ino, basename) as a dir_entry to the parent INODE;
   // since book uses enter_name() i'll be using that instead
   enter_name(pmip, ino, basename);
@@ -226,7 +228,7 @@ int my_mkdir(char * pathname) {
     // (1). divide pathname into dirname and basename, e.g. pathname=/a/b/c, then dirname=/a/b; basename=c;
     char * dname = (char *)malloc(sizeof(pathname)), * bname = (char *)malloc(sizeof(pathname));
     separatePathname(pathname, &dname, &bname, "mkdir");
-    
+
     // (2). // dirname must exist and is a DIR:
     int pino = getino(dname);
     if (pino == -1) {
