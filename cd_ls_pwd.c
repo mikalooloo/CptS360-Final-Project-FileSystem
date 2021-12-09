@@ -168,18 +168,19 @@ char * rpwd(MINODE *wd, int print) {
       MOUNT * mptr = &mountTable[i];
       if (mptr->mounted_inode) {
         if (mptr->mounted_inode->ino != root->ino) { // is a mounted inode the same dev as the root?
-          if (print) printf("/%s", mptr->name); // you found your mounted inode, so either print
-          else { // or return according to print
+          if (print) { 
             char * temp = (char *)malloc(sizeof(64));
-            strcpy(temp, "/"); strcat(temp,mptr->name);
-            return strcat(temp,"/");
+            strcpy(temp, mptr->name);
+            ++temp;
+            printf("/%s", temp); // you found your mounted inode, so either print
           }
+          else return mptr->name; // or return accordingly 
           return "/";
         }
       }
     }
   }
-  
+
   // (3). pip = iget(dev, parent_ino);
   MINODE * pip = iget(dev, parent_ino);
   // (4). from pip->INODE.i_block[ ]: get my_name string by my_ino as LOCAL
@@ -187,13 +188,16 @@ char * rpwd(MINODE *wd, int print) {
   findmyname(pip, my_ino, my_name); // finds name and copies it into my_name
   // (5). rpwd(pip); // recursive call rpwd(pip) with parent minode
   printf("\n");
-  char * temp = rpwd(pip, print);
+  char * temp = (char *)malloc(64);
+  strcpy(temp, rpwd(pip, print));
+  strcat(temp, "/");
   pip->dirty = 1;
   iput(pip);
 
   // (6). print "/%s", my_name;
   if (print) printf("/%s", my_name); // prints cwd
   else return strcat(temp, my_name); // returns cwd
+  return "";
 }
 
 
