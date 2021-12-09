@@ -366,7 +366,36 @@ int validPathname(char * pathname) {
 }
 
 int cs() {
-   
+   running = running->next; 
+   running->cwd = iget(dev, 2);
+   if (running->pid == -1) {
+      printf("\nfailure to switch process over to %d: cs fail\n", running->pid);
+      return -1;
+   }
+   else printf("switched process to %d: pid check passed\n", running->pid);
+
+   printf("\ncs successful\n");
+   return 1;
+}
+
+int access(char * filename, char mode) 
+{
+   int r;
+   /*if (SUPERuser: running->uid == 0) 
+      return 1;
+
+   // if not:
+   int ino = getino(filename);
+   mip = iget(dev, ino);
+
+   if (OWNER: mip->INODE.i_uid == running->uid)
+    r = (check owner's rwx with mode);  // by tst_bit()
+  else
+    r = (check other's rwx with mode);  // by tst_bit()
+
+  iput(mip);*/
+  
+  return r;
 }
 
 // debug command only
