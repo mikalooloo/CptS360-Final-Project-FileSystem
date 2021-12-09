@@ -80,10 +80,11 @@ int midalloc(MINODE *mip) // release a used minode
 MINODE *iget(int dev, int ino)
 {
   int i;
-  MINODE *mip;
+  MINODE *mip; INODE *ip;
   char buf[BLKSIZE];
-  int blk, offset;
-  INODE *ip;
+  int blk, iblk2 = iblk, offset;
+  MOUNT * mptr = getmptr(dev);
+  if (mptr != NULL) iblk2 = mptr->blk;
 
   for (i=0; i<NMINODE; i++){
     mip = &minode[i];
@@ -99,8 +100,8 @@ MINODE *iget(int dev, int ino)
    mip->dev = dev;
    mip->ino = ino;
    // get INODE of ino to buf    
-   blk    = (ino-1)/8 + iblk;
-   offset = (ino-1) % 8;
+   blk    = (ino-1) / 8 + iblk2; // iblk2 is either global iblk if initializing mount_root()
+   offset = (ino-1) % 8;         // or the current dev's iblk
 
    //printf("iget: ino=%d blk=%d offset=%d\n", ino, blk, offset);
 
@@ -120,13 +121,11 @@ void iput(MINODE *mip)
 {
  int i, block, offset;
  char buf[BLKSIZE];
- INODE *ip;
+ INODE * ip;
+ MOUNT * mptr = getmptr(dev);
 
- if (mip==0) 
-     return;
-
+ if (mip==0) return;
  mip->refCount--;
- 
  if (mip->refCount > 0) return;
  if (!mip->dirty)       return;
  
@@ -138,13 +137,13 @@ void iput(MINODE *mip)
 
   Write YOUR code here to write INODE back to disk
  *****************************************************/
-   block = (mip->ino - 1)/8 + iblk;
+   block  = (mip->ino - 1) / 8 + mptr->blk;
    offset = (mip->ino - 1) % 8;
    get_block(mip->dev, block, buf);
-
-   ip = (INODE * )buf + offset;
-   *ip = mip->INODE;
-   put_block(mip->dev, block, buf);
+   ip = (INODE *)buf + offset; // ip points at INODE
+   *ip = mip->INODE; // copy INODE to inode in block
+   put_block(mip->dev, block, buf); // write back to disk
+   midalloc(mip); // mip->refCount = 0
 
 } 
 
@@ -192,10 +191,13 @@ int getino(char *pathname)
       return 2;
   
   // starting mip = root OR CWD
-  if (pathname[0]=='/')
-     mip = root;
-  else
-     mip = running->cwd;
+  if (pathname[0]=='/') { 
+     dev = root->dev; 
+     ino = root->ino; }
+  else {
+     dev = running->cwd->dev;
+     ino = running->cwd->ino; }
+  mip = iget(dev, ino);
    
   mip->refCount++;         // because we iput(mip) later
   
@@ -205,15 +207,49 @@ int getino(char *pathname)
       printf("===========================================\n");
       printf("getino: i=%d name[%d]=%s\n", i, i, name[i]);
  
+      if (!S_ISDIR(mip->INODE.i_mode)) {
+         printf("%s is not a directory\n", name[i]);
+         iput(mip);
+         return -1;
+      }
+
       ino = search(mip, name[i]);
    
-      if (ino==0){
+      if (ino==-1) // couldn't find INODE
+      {
          iput(mip);
          printf("\nname %s does not exist: getino failed\n", name[i]);
          return -1;
       }
-      iput(mip);
-      mip = iget(dev, ino);
+      else if (ino == 2 && dev != mip->dev) // found root INODE but its dev number differs from real root
+      {
+         // **upwards traversal**
+         // using its dev number, locate mount table entry, which points to mounted minode
+         MOUNT * mptr = getmptr(dev);
+         // switch to minode and continue
+         iput(mip);
+         mip = mptr->mounted_inode;       // switching to mounted minode
+         dev = mptr->mounted_inode->dev;  // and mounted dev
+      }
+      else // INODE exists and is not root INODE of the mounted file system
+      {
+         iput(mip);
+         mip = iget(dev, ino); // get new mip so we can check if it's mounted
+
+         // **downwards traversal**
+         if (mip->mounted == 1) 
+         {
+            // follow minode's mountTable pointer to locate the mountTable entry
+            MOUNT * mptr = mip->mptr;
+            // use the mountTable entry to get the new dev number, and set ino to 2 since it's at root
+            dev = mptr->dev;
+            ino = 2;
+            // then iget() its root INODE into memory
+            // and continue to search under the root INODE of the virtual disk
+            iput(mip);
+            mip = iget(dev, ino); // switching to root INODE of new mount
+         }
+      }
    }
    
    iput(mip);
@@ -240,7 +276,7 @@ int findmyname(MINODE *parent, u32 myino, char myname[ ])
 
    // going to 11 because direct blocks go from i_block[0] to i_block[11]
    for (i = 0; i < 12; ++i) {
-      if (!ip->i_block[i]) return 0;
+      if (!ip->i_block[i]) return -1;
 
       get_block(dev, ip->i_block[0], sbuf);
       dp = (DIR *)sbuf;
@@ -253,7 +289,7 @@ int findmyname(MINODE *parent, u32 myino, char myname[ ])
             //dp->inode, dp->rec_len, dp->name_len, dp->name);
          if (dp->inode == myino){
          //if (!strcmp(temp, myname)) {
-            printf("found %s : ino = %d\n", temp, dp->inode);
+            //printf("found %s : ino = %d\n", temp, dp->inode);
             strncpy(myname, dp->name, dp->name_len);
              myname[dp->name_len] = 0;
             return 1;
@@ -263,7 +299,7 @@ int findmyname(MINODE *parent, u32 myino, char myname[ ])
       }
    }
    
-   return 0;
+   return -1;
 }
 
 int findino(MINODE *mip, u32 *myino) // myino = i# of . return i# of ..
