@@ -63,8 +63,9 @@ int mywrite(int fd, char buf[ ], int nbytes)
             // using mailman's algorithm
             // linear address = LBK - 256 - 12 (logical block minus indirect blocks), 
             // get block addresses by dividing and modding:
-            int indirect_ptrblk = (lbk - 256 - 12) / 256; // 256 = 256-bit integers
-			int indirect_datablk = (lbk - 256 - 12) % 256;
+            lbk -= (12+256);
+            int indirect_ptrblk = lbk / 256; // 256 = 256-bit integers
+			int indirect_datablk = lbk % 256;
 
             // first check INODE block 13 and create it if needed
             if (mip->INODE.i_block[13] == 0){
@@ -80,7 +81,7 @@ int mywrite(int fd, char buf[ ], int nbytes)
                 ibuf[indirect_ptrblk] = balloc(mip->dev);
                 if (ibuf[indirect_ptrblk]==0) {
                     printf("no more disk space\n");
-                    return 0;
+                    return -1;
                 }
                 zero_out(mip->dev, ibuf[indirect_ptrblk]);
                 put_block(mip->dev, mip->INODE.i_block[13], (char *)ibuf);
@@ -95,9 +96,9 @@ int mywrite(int fd, char buf[ ], int nbytes)
                 ibuf2[indirect_datablk] = balloc(mip->dev);
                 if (ibuf2[indirect_datablk]==0) {
                     printf("no more disk space\n");
-                    return 0;
+                    return -1;
                 }
-                zero_out(mip->dev, ibuf2[indirect_datablk]);
+                //zero_out(mip->dev, ibuf2[indirect_datablk]);
                 put_block(mip->dev, ibuf[indirect_ptrblk], (char *)ibuf2); // set data block in pointer block
             }
 
@@ -183,7 +184,7 @@ int mymv(char * src, char * dest)
         printf("\n src file %s does not exist: mv failed\n", src);
         return -1;
     }
-    else printf("src file %s exists: passed existence check\n", src);
+    else printf("src file %s exists: existence check passed\n", src);
 
     if (1) { // change this if to compare devs ?? not sure
              // CASE 1: same dev:
@@ -221,14 +222,14 @@ int my_cp(char * src, char * dest)
     if (fd == -1) {
         printf("open failure\n");
         close_file(fd); close_file(gd);
-        printf("\nsrc file %s did not open correctly as fd is %d: cp failed\n", src, fd);
+        printf("\nsrc file %s failed to open with fd %d: cp failed\n", src, fd);
         return -1;
     }
     else printf("src file %s opened correctly with fd %d: src open check passed\n", src, fd);
     if (gd == -1) { 
         printf("open failure\n");
         close_file(fd); close_file(gd);
-        printf("\ndest file %s did not open correctly as fd is %d: cp failed\n", dest, gd);
+        printf("\ndest file %s failed to open with fd %d: cp failed\n", dest, gd);
         return -1;
     }
     else printf("dest file %s opened correctly with fd %d: dest open check passed\n", dest, gd);
