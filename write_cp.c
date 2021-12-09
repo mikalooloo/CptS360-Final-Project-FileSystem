@@ -153,6 +153,7 @@ int mywrite(int fd, char buf[ ], int nbytes)
 
 int write_file(int fd, int nbytes)
 {
+    // do essentially same thing as mywrite()
   // 1. Preprations:
      //ask for a fd   and   a text string to write;
     char buf[BLKSIZE] = { 0 };
