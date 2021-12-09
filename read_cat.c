@@ -76,7 +76,7 @@ int myread(int fd, char buf[], int nbytes)
 	//check oftp
 	if(!oftp)
 	{
-		printf("Attention: file for write!\n");
+		printf("oftp is not valid: myread failed\n");
 		return -1;
 	}
 
@@ -277,6 +277,14 @@ int my_cat(char *pathname)
     }
 
 	int fd = open_file(pathname, 0); // open_file takes file name then an int depending on what mode, R = 0
+
+	if (fd == -1) {
+        printf("open failure\n");
+        close_file(fd); 
+        printf("\nfile %s failed to open with fd %d: cat failed\n", pathname, fd);
+        return -1;
+    }
+    else printf("file %s opened correctly with fd %d: open check passed\n", pathname, fd);
 
 	printf("\n");
 	while(n = myread(fd, mybuf, 1024))
