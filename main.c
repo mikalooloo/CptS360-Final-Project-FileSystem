@@ -8,6 +8,7 @@ extern MINODE *iget();
 MINODE minode[NMINODE];
 MINODE *root;
 PROC   proc[NPROC], *running;
+MOUNT mountTable[NMOUNT]; // in init() all dev are set to 0
 
 char gpath[128]; // global for tokenized components
 char *name[64];  // assume at most 64 components in pathname
@@ -16,9 +17,7 @@ int   n;         // number of component strings
 int fd, dev;
 int nblocks, ninodes, bmap, imap, iblk;
 char line[128], cmd[32], pathname[128], pathname2[128];
-
-MOUNT mountTable[NMOUNT]; // in init() all dev are set to 0
-
+char *disk = "diskimage";
 
 int init()
 {
@@ -44,7 +43,9 @@ int init()
     for (j = 0; j<NFD; j++){
       p->fd[j] = 0;
     }
+    p->next = &proc[i+1];
   }
+  proc[NPROC-1].next = &proc[0]; // circular list
   for (i=0; i < NMOUNT; i++){ // setting mountTable[] dev to 0
      mntptr = &mountTable[i];
      mntptr->dev = 0;
@@ -57,11 +58,34 @@ int mount_root()
 {  
   printf("mount_root()\n");
   root = iget(dev, 2);
+  MOUNT * mptr = &mountTable[0];
+  mptr->dev = dev;
+  mptr->ninodes = sp->s_inodes_count;
+  mptr->nblocks = sp->s_blocks_count;
+  mptr->bmap = gp->bg_block_bitmap;
+  mptr->imap = gp->bg_inode_bitmap;
+  mptr->blk = gp->bg_inode_table;
+  mptr->mounted_inode = root;
+  root->mptr = mptr;
+  strcpy(mptr->name,"/");
+  strncpy(mptr->mount_name, disk, NLENGTH); 
+  // set proc's CWD
+  for (int i = 0; i < NPROC; i++) 
+      proc[i].cwd = iget(dev, 2);
 }
 
 //TO DO: write a MOUNT *getmptr(int dev) function, which returns a pointer to dev's mountTable[] entry
+MOUNT * getmptr(int dev) {
+   for (int i = 0; i < NMOUNT; i++) 
+   {
+      if (mountTable[i].dev == dev)
+      {
+         //printf("\nfound dev %d's pointer to mountTable[%d] entry %s\n", dev, i, mountTable[i].mount_name);
+         return &mountTable[i];
+      }
+   }
+}
 
-char *disk = "diskimage";
 int main(int argc, char *argv[ ])
 {
   int ino;
@@ -123,46 +147,50 @@ int main(int argc, char *argv[ ])
     sscanf(line, "%s %s %s", cmd, pathname, pathname2);
     printf("\ncmd=%s pathname=%s %s\n", cmd, pathname, pathname2);
 
-    if (strcmp(cmd, "menu")==0) // MISC: MENU
-       menu();
-    else if (strcmp(cmd, "ls")==0) // LEVEL 1: LS
+   // MAIN COMMANDS
+    if (strcmp(cmd, "ls")==0)           // LEVEL 1: LS
        my_ls(pathname);
-    else if (strcmp(cmd, "cd")==0) // LEVEL 1: CD
+    else if (strcmp(cmd, "cd")==0)      // LEVEL 1: CD
        my_cd(pathname);
-    else if (strcmp(cmd, "pwd")==0) // LEVEL 1: PWD
+    else if (strcmp(cmd, "pwd")==0)     // LEVEL 1: PWD
        my_pwd(running->cwd);
-    else if (strcmp(cmd, "mkdir")==0) // LEVEL 1: MKDIR
+    else if (strcmp(cmd, "mkdir")==0)   // LEVEL 1: MKDIR
        my_mkdir(pathname);
-    else if (strcmp(cmd, "creat")==0) // LEVEL 1: CREAT
+    else if (strcmp(cmd, "creat")==0)   // LEVEL 1: CREAT
        my_creat(pathname);
-    else if (strcmp(cmd, "rmdir")==0) // LEVEL 1: RMDIR
+    else if (strcmp(cmd, "rmdir")==0)   // LEVEL 1: RMDIR
        my_rmdir(pathname);
-    else if (strcmp(cmd, "link")==0) // LEVEL 1: LINK
+    else if (strcmp(cmd, "link")==0)    // LEVEL 1: LINK
        my_link(pathname, pathname2); 
-    else if (strcmp(cmd, "unlink")==0) // LEVEL 1: UNLINK
+    else if (strcmp(cmd, "unlink")==0)  // LEVEL 1: UNLINK
        my_unlink(pathname);
     else if (strcmp(cmd, "symlink")==0) // LEVEL 1: SYMLINK
        my_symlink(pathname, pathname2);
-    else if (strcmp(cmd, "cat")==0) // LEVEL 2: CAT
+    else if (strcmp(cmd, "cat")==0)     // LEVEL 2: CAT
        my_cat(pathname);
-    else if (strcmp(cmd, "cp")==0) // LEVEL 2: CP
+    else if (strcmp(cmd, "cp")==0)      // LEVEL 2: CP
        my_cp(pathname, pathname2); 
-    else if (strcmp(cmd, "mount")==0) // LEVEL 3: MOUNT
+    else if (strcmp(cmd, "mount")==0)   // LEVEL 3: MOUNT
        my_mount(pathname, pathname2);
-    else if (strcmp(cmd, "umount")==0) // LEVEL 3: UMOUNT
+    else if (strcmp(cmd, "umount")==0)  // LEVEL 3: UMOUNT
        my_umount(pathname);
+   // MISC COMMANDS
     else if (strcmp(cmd, "mv")==0 || strcmp(cmd, "rename")==0)  // MISC [LEVEL 2]: MV, RENAME
        mymv(pathname, pathname2); 
     else if (strcmp(cmd, "open")==0) // MISC [LEVEL 2]: OPEN
-       open_file(pathname, atoi(pathname2));
+       if (strcmp(pathname2,"") != 0) open_file(pathname, atoi(pathname2));
+       else printf("\nnot valid arguments\n");
     else if (strcmp(cmd, "close")==0)  // MISC [LEVEL 2]: CLOSE
-       close_file(atoi(pathname));
+       if (strcmp(pathname,"") != 0) close_file(atoi(pathname));
+       else printf("\nnot valid arguments\n");
     else if (strcmp(cmd, "pfd")==0)  // MISC [LEVEL 2]: PFD
        mypfd(); 
     else if (strcmp(cmd, "read")==0) // MISC [LEVEL 2]: READ
-       read_file(atoi(pathname), atoi(pathname2));
+       if (strcmp(pathname, "") != 0 && strcmp(pathname2,"") != 0) read_file(atoi(pathname), atoi(pathname2));
+       else printf("\nnot valid arguments\n");
     else if (strcmp(cmd, "write")==0) // MISC [LEVEL 2]: WRITE
-       write_file(atoi(pathname), atoi(pathname2));
+       if (strcmp(pathname, "") != 0 && strcmp(pathname2,"") != 0) write_file(atoi(pathname), atoi(pathname2));
+       else printf("\nnot valid arguments\n");
     else if (strcmp(cmd, "quit")==0)  // MISC: QUIT
        quit();
     else if (strcmp(cmd, "debug")==0) { // MISC: DEBUG
@@ -171,12 +199,21 @@ int main(int argc, char *argv[ ])
     }
     else if (debug) { // DEBUG COMMANDS
          if (strcmp(cmd, "print")==0) // print (int) -> prints out (int) minnodes
-            printMinnodes(atoi(pathname));
+            if (strcmp(pathname,"") != 0) printMinnodes(atoi(pathname));
+            else printf("\nnot valid arguments\n");
          else if (strcmp(cmd, "close")==0)  // close file
-            close_file(atoi(pathname));
+            if (strcmp(pathname,"") != 0) close_file(atoi(pathname));
+            else printf("\nnot valid arguments\n");
+         else if (strcmp(cmd, "getmptr")==0) // get mptr of dev inputted
+            if (strcmp(pathname,"") != 0) getmptr(atoi(pathname));
+            else printf("\nnot valid arguments\n");
+         else if (strcmp(cmd, "menu")==0) // get debug menu
+            debug_menu();
          else  
             printf("\nnot valid command\n");
     }
+    else if (strcmp(cmd, "menu")==0) // MISC: MENU
+       menu(); // put after debug commands, so if not in debug, give regular menu
     else
       printf("\nnot valid command\n");
   }
@@ -201,5 +238,13 @@ int menu() {
    printf("\n[pfd]\nprints out currently open files\n");
    printf("\n[debug]\nuse commands like open, close\n");
    printf("\n[quit]\nquits application\n");
+   printf("\n************************\n");
+}
+
+int debug_menu() {
+   printf("\n************************\n");
+   printf("\n[menu]\nprints out all possible debug commands and their descriptions\n");
+   printf("\n[print (int)]\nprints out int number of minnodes\n");
+   
    printf("\n************************\n");
 }
