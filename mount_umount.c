@@ -126,7 +126,7 @@ int my_mount(char * filesys, char * pathname)
 	//   record new DEV, ninodes, nblocks, bmap, imap, iblk in mountTable[]
 
 	mptr->dev = dev;
-	if (pathname[0] = '/') pathname++;
+	//if (pathname[0] = '/') pathname++;
 	strncpy(mptr->name, pathname, NLENGTH);
 	strncpy(mptr->mount_name, filesys, NLENGTH);
 	mptr->ninodes = ext->s_inodes_count;
