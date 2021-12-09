@@ -49,15 +49,15 @@ int ialloc(int dev)  // allocate an inode number from inode_bitmap
 {
   int  i;
   char buf[BLKSIZE];
+  MOUNT * mptr = getmptr(dev); // using current dev's instead
 
   // read inode_bitmap block
-  //MTABLE *mp = (MTABLE *)get_mtable(dev);
-  get_block(dev, imap, buf);
+  get_block(dev, mptr->imap, buf);
 
-  for (i=0; i < ninodes; i++){
+  for (i=0; i < mptr->ninodes; i++){
     if (tst_bit(buf, i)==0){
         set_bit(buf, i);
-        put_block(dev, imap, buf);
+        put_block(dev, mptr->imap, buf);
         decFreeInodes(dev);
         printf("allocated ino = %d\n", i+1); // bits count from 0; ino from 1
         return i+1;
@@ -69,13 +69,14 @@ int ialloc(int dev)  // allocate an inode number from inode_bitmap
 int balloc(int dev) 
 {
   char buf[BLKSIZE];
+  MOUNT * mptr = getmptr(dev); // using current dev's instead
 
-  get_block(dev, bmap, buf);
+  get_block(dev, mptr->bmap, buf);
 
-  for (int i = 0; i < nblocks; ++i) {
+  for (int i = 0; i < mptr->nblocks; ++i) {
     if (tst_bit(buf, i) == 0) {
       set_bit(buf, i);
-      put_block(dev, bmap, buf);
+      put_block(dev, mptr->bmap, buf);
       decFreeBlocks(dev);
       //printf("allocated blk = %d\n", i+1);
       return i + 1;
@@ -232,7 +233,7 @@ int my_mkdir(char * pathname) {
       printf("\nparent %s does not exist: mkdir failed\n", dname);
       return -1;
     }
-    else printf("parent %s exists: passed parent check\n", dname);
+    else printf("parent %s exists: parent check passed\n", dname);
   
     MINODE * pmip = iget(dev, pino);
     //check pmip->INODE is a DIR
@@ -240,7 +241,7 @@ int my_mkdir(char * pathname) {
       printf("\npmip->INODE %s is not a DIR: mkdir failed\n", dname);
       return -1;
     }
-    else printf("%s is a DIR: passed DIR check\n", dname);
+    else printf("%s is a DIR: DIR check passed\n", dname);
 
     // (3). // basename must not exist in parent DIR:
     int s = search(pmip, bname); //must return -1;
@@ -248,7 +249,7 @@ int my_mkdir(char * pathname) {
       printf("\n%s already exists under %s: mkdir failed\n", bname, dname);
       return -1;
     }
-    else printf("%s does not exist under %s yet: passed new dir check\n", bname, dname);
+    else printf("%s does not exist under %s yet: new DIR check passed\n", bname, dname);
 
     // (4). call kmkdir(pmip, basename) to create a DIR;
     kmkdir(pmip, bname);
@@ -304,7 +305,7 @@ int my_creat(char * pathname) {
       printf("\nparent %s does not exist: creat failed\n", dname);
       return 0;
     }
-    else printf("parent %s exists: passed parent check\n", dname);
+    else printf("parent %s exists: parent check passed\n", dname);
 
     MINODE * pmip = iget(dev, pino);
     //check pmip->INODE is a DIR
@@ -312,7 +313,7 @@ int my_creat(char * pathname) {
       printf("\nmip->INODE %s is not a DIR: creat failed\n", dname);
       return 0;
     }
-    else printf("%s is a DIR: passed DIR check\n", dname);
+    else printf("%s is a DIR: DIR check passed\n", dname);
 
     // (3). // basename must not exist in parent DIR:
     int s = search(pmip, bname); //must return -1;
@@ -320,7 +321,7 @@ int my_creat(char * pathname) {
       printf("\n%s already exists under %s: creat failed\n", bname, dname);
       return -1;
     }
-    else printf("%s does not exist under %s yet: passed new file check\n", bname, dname);
+    else printf("%s does not exist under %s yet: new file check passed\n", bname, dname);
 
     // (4). call kmkdir(pmip, basename) to create a DIR;
     kcreat(pmip, bname);
