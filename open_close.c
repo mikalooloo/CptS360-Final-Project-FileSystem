@@ -116,7 +116,7 @@ int open_file(char * pathname, int mode)
       printf("\nmode %d is not valid: open_file failed\n", mode);
       return -1;
     }
-    else printf("mode %d is valid: passed mode check\n", mode);
+    else printf("mode %d is valid: mode check passed\n", mode);
 
     char * dname = (char *)malloc(sizeof(pathname)), * bname = (char *)malloc(sizeof(pathname));
     separatePathname(pathname, &dname, &bname, "open_file");
@@ -133,9 +133,9 @@ int open_file(char * pathname, int mode)
         printf("file %s could not be created: open_file failed\n", bname);
         return -1;
       }
-      else printf("file %s successfully created: passed existence check\n", bname);
+      else printf("file %s successfully created: existence check passed\n", bname);
     }
-    else printf("file %s already exists: passed existence check\n", bname);
+    else printf("file %s already exists: existence check passed\n", bname);
 
     MINODE * mip = iget(dev, ino);  
 
@@ -144,7 +144,7 @@ int open_file(char * pathname, int mode)
       printf("\nfile %s is not a regular file: open_file failed\n", bname);
       return -1;
     }
-    else printf("file %s is a regular file: passed file check\n", bname);
+    else printf("file %s is a regular file: file check passed\n", bname);
 
     // check permissions here
 
@@ -167,7 +167,7 @@ int open_file(char * pathname, int mode)
           printf("\nfile %s is already opened with incompatible mode %d: open_file failed\n", bname, mode);
           return -1;
         }
-        else printf("file %s is already opened but with compatible mode %d\n", bname, mode);
+        else printf("file %s is already opened but with compatible mode %d: mode check passed\n", bname, mode);
       }
     }
 
