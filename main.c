@@ -136,7 +136,7 @@ int main(int argc, char *argv[ ])
   // WRTIE code here to create P1 as a USER process
   printf("\n************************\n");
   while(1){
-    printf("\nLevel 1: [ls|cd|pwd|mkdir|creat|rmdir|link|unlink|symlink]\nLevel 2: [cat|cp]\nLevel 3: [mount|umount]\nMisc:    [menu|open|close|pfd|read|write|mv|rename|debug|quit]\ninput command :  ");
+    printf("\nLevel 1: [ls|cd|pwd|mkdir|creat|rmdir|link|unlink|symlink]\nLevel 2: [cat|cp]\nLevel 3: [mount|umount]\nMisc:    [menu|open|close|pfd|read|write|mv|rename|cs|debug|quit]\ninput command :  ");
     fgets(line, 128, stdin);
     line[strlen(line)-1] = 0;
 
@@ -192,6 +192,8 @@ int main(int argc, char *argv[ ])
     else if (strcmp(cmd, "write")==0) // MISC [LEVEL 2]: WRITE
        if (strcmp(pathname, "") != 0 && strcmp(pathname2,"") != 0) write_file(atoi(pathname), atoi(pathname2));
        else printf("\nnot valid arguments\n");
+    else if (strcmp(cmd, "cs")==0) // MISC [LEVEL 3]: CS
+       cs();
     else if (strcmp(cmd, "quit")==0)  // MISC: QUIT
        quit();
     else if (strcmp(cmd, "debug")==0) { // MISC: DEBUG
@@ -237,6 +239,7 @@ int menu() {
    printf("\n[mv (src) (dest)]\nmoves src to dest\n");
    printf("\n[rename (src) (dest)]\renames src to dest\n");
    printf("\n[pfd]\nprints out currently open files\n");
+   printf("\n[cs]\nswitches processes to the next one in line\n");
    printf("\n[debug]\nuse commands like open, close\n");
    printf("\n[quit]\nquits application\n");
    printf("\n************************\n");
@@ -246,6 +249,6 @@ int debug_menu() {
    printf("\n************************\n");
    printf("\n[menu]\nprints out all possible debug commands and their descriptions\n");
    printf("\n[print (int)]\nprints out int number of minnodes\n");
-   
+   printf("\n[getmptr (int)\nreturns struct Mount pointer\n");
    printf("\n************************\n");
 }
