@@ -38,17 +38,18 @@ int idalloc(int dev, int ino)
 {
     int i;  
     char buf[BLKSIZE];
-        // MTABLE *mp = (MTABLE *)get_mtable(dev);
-    if (ino > ninodes){  
+    MOUNT * mptr = getmptr(dev); // using current dev's instead
+
+    if (ino > mptr->ninodes){  
         printf("\ninumber %d out of range: idalloc failed\n", ino);
         return -1;
     }
     
-    get_block(dev, imap, buf);  // get inode bitmap block into buf[]
+    get_block(dev, mptr->imap, buf);  // get inode bitmap block into buf[]
     
     clr_bit(buf, ino-1);        // clear bit ino-1 to 0
 
-    put_block(dev, imap, buf);  // write buf back
+    put_block(dev, mptr->imap, buf);  // write buf back
     // update free inode count in SUPER and GD
     incFreeInodes(dev);
 
@@ -59,17 +60,18 @@ int bdalloc(int dev, int bno)
 {
     int i;  
     char buf[BLKSIZE];
-    // MTABLE *mp = (MTABLE *)get_mtable(dev);
-    if (bno > nblocks){  
+    MOUNT * mptr = getmptr(dev); // using current dev's instead
+
+    if (bno > mptr->nblocks){  
         printf("\ninumber %d out of range: bdalloc failed\n", bno);
         return -1; 
     }
     
-    get_block(dev, bmap, buf);  // get inode bitmap block into buf[]
+    get_block(dev, mptr->bmap, buf);  // get inode bitmap block into buf[]
     
     clr_bit(buf, bno-1);        // clear bit ino-1 to 0
 
-    put_block(dev, bmap, buf);  // write buf back
+    put_block(dev, mptr->bmap, buf);  // write buf back
     // update free inode count in SUPER and GD
     incFreeBlocks(dev);
 
@@ -142,7 +144,7 @@ int rm_child(MINODE * pmip, char *rname)
                 }
                 
                 // found the name and did the appropiate rm action
-                printf("removed child %s: passed rm_child()\n", rname);
+                printf("removed child %s: rm_child() passed\n", rname);
                 return 0;
             }
           
@@ -173,7 +175,7 @@ int my_rmdir(char * pathname) {
         printf("\n%s does not exist: rmdir failed\n", pathname);
         return -1;
     }
-    else printf("parent %s exists: passed check\n", pathname);
+    else printf("parent %s exists: ino check passed\n", pathname);
 
     MINODE * mip = iget(dev, ino);
     // (2). verify INODE is a DIR (by INODE.i_mode field);
@@ -181,21 +183,21 @@ int my_rmdir(char * pathname) {
         printf("\n%s is not a DIR: rmdir failed\n", pathname);
         return -1;
     }
-    else printf("%s is a DIR: passed DIR check\n", pathname);
+    else printf("%s is a DIR: DIR check passed\n", pathname);
 
     // minode is not BUSY (refCount = 1);
     if (mip->refCount != 1) {
         printf("\nminode is busy as refCount is %d: rmdir failed\n", mip->refCount);
         return -1;
     }
-    else printf("minode is not busy: passed busy check\n");
+    else printf("minode is not busy: busy check passed\n");
 
     // verify DIR is empty (traverse data blocks for number of entries = 2);
     if (mip->INODE.i_links_count > 2) {
         printf("\nDIR %s has other dirs inside: rmdir failed\n", pathname);
         return -1;
     }
-    else printf("DIR %s has no dirs inside: passed dirs check\n", pathname);
+    else printf("DIR %s has no dirs inside: dirs check passed\n", pathname);
     
     if (mip->INODE.i_links_count == 2) { // only has . and ..
         get_block(mip->dev, mip->INODE.i_block[0], buf);
@@ -211,7 +213,7 @@ int my_rmdir(char * pathname) {
             printf("\nDIR %s has files inside: rmdir failed\n", pathname);
             return -1;
         }
-        else printf("DIR %s has no files inside: passed files check\n", pathname);
+        else printf("DIR %s has no files inside: files check passed\n", pathname);
     }
     // (3). /* get parent’s ino and inode */
     int pino = findino(mip, &ino); //get pino from .. entry in INODE.i_block[0]
