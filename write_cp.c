@@ -30,7 +30,7 @@ int mywrite(int fd, char buf[ ], int nbytes)
             if (mip->INODE.i_block[lbk] == 0) {   // if no data block yet
                 mip->INODE.i_block[lbk] = balloc(mip->dev);// MUST ALLOCATE a block
             }
-            blk = mip->INODE.i_block[lbk];      // blk should be a disk block now
+            blk = mip->INODE.i_block[lbk];      // blk should be a direct data block now
         }
         else if (lbk >= 12 && lbk < 256 + 12){ // INDIRECT blocks 
               // HELP INFO:
@@ -61,9 +61,12 @@ int mywrite(int fd, char buf[ ], int nbytes)
         else {
             // double indirect blocks */
             // using mailman's algorithm
-            int indirect_blk = (lbk - 256 - 12) / 256;
-			int indirect_off = (lbk - 256 - 12) % 256;
+            // linear address = LBK - 256 - 12 (logical block minus indirect blocks), 
+            // get block addresses by dividing and modding:
+            int indirect_ptrblk = (lbk - 256 - 12) / 256; // 256 = 256-bit integers
+			int indirect_datablk = (lbk - 256 - 12) % 256;
 
+            // first check INODE block 13 and create it if needed
             if (mip->INODE.i_block[13] == 0){
                 mip->INODE.i_block[13] = balloc(mip->dev);
                 zero_out(mip->dev, mip->INODE.i_block[13]);
@@ -71,32 +74,35 @@ int mywrite(int fd, char buf[ ], int nbytes)
 
             get_block(mip->dev, mip->INODE.i_block[13], (char *)ibuf);
 
-            if (ibuf[indirect_blk] == 0) // if there's no data blocks
+            // then check INODE block 13's block of pointers, and create if needed
+            if (ibuf[indirect_ptrblk] == 0) // if there's no pointer blocks
             {
-                ibuf[indirect_blk] = balloc(mip->dev);
-                if (ibuf[indirect_blk]==0) {
+                ibuf[indirect_ptrblk] = balloc(mip->dev);
+                if (ibuf[indirect_ptrblk]==0) {
                     printf("no more disk space\n");
                     return 0;
                 }
-                zero_out(mip->dev, ibuf[indirect_blk]);
+                zero_out(mip->dev, ibuf[indirect_ptrblk]);
                 put_block(mip->dev, mip->INODE.i_block[13], (char *)ibuf);
             }
 
             int ibuf2[BLKSIZE] = { 0 };
-            get_block(mip->dev, ibuf[indirect_blk], (char *)ibuf2);
+            get_block(mip->dev, ibuf[indirect_ptrblk], (char *)ibuf2);
 
-            if (ibuf2[indirect_off] == 0) // if there's no data blocks
+            // then check INODE block 13's block of pointers' data blocks (now double indirect)
+            if (ibuf2[indirect_datablk] == 0) // if there's no data blocks
             {
-                ibuf2[indirect_off] = balloc(mip->dev);
-                if (ibuf2[indirect_off]==0) {
+                ibuf2[indirect_datablk] = balloc(mip->dev);
+                if (ibuf2[indirect_datablk]==0) {
                     printf("no more disk space\n");
                     return 0;
                 }
-                zero_out(mip->dev, ibuf2[indirect_off]);
-                put_block(mip->dev, ibuf[indirect_blk], (char *)ibuf2);
+                zero_out(mip->dev, ibuf2[indirect_datablk]);
+                put_block(mip->dev, ibuf[indirect_ptrblk], (char *)ibuf2); // set data block in pointer block
             }
 
-            blk = ibuf2[indirect_off];
+            // then set blk to the double indirect data block
+            blk = ibuf2[indirect_datablk];
         }
 
         /*
@@ -144,11 +150,10 @@ int mywrite(int fd, char buf[ ], int nbytes)
   return nbytes;
 }
 
-int write_file()
+int write_file(int fd, int nbytes)
 {
   // 1. Preprations:
      //ask for a fd   and   a text string to write;
-    int fd = 0, nbytes = 0;
     char buf[BLKSIZE] = { 0 };
 
   // 2. verify fd is indeed opened for WR or RW or APPEND mode
