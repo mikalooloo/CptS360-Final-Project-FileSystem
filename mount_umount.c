@@ -10,11 +10,12 @@ extern GD    *gp;
 int my_mount(char * filesys, char * pathname)
 {
 	//variable declaration
-	int i, fd, dev, ino;
+	int i = 0, fd = 0, dev = 0, ino = 0;
 	MINODE *mip;
-	MOUNT *mptr; int mi;
+	MOUNT *mptr; int mi = 0;
 	char buf[BLKSIZE];
 	SUPER *ext;
+	GD * g;
 
 	//1. ask for a filesys (a virtual disk) amd mount_point (a DIR pathname).
 	//   if no parameters: display current mounted filesystems
@@ -27,7 +28,7 @@ int my_mount(char * filesys, char * pathname)
 		{
 			if(mountTable[i].dev)
 			{
-				printf("%s mounted on %s wth dev %d\n", mountTable[i].mount_name, mountTable[i].name, mountTable[i].dev);
+				printf("%s mounted on %s wth dev %d and ino %d\n", mountTable[i].mount_name, mountTable[i].name, mountTable[i].dev, mountTable[i].mounted_inode->ino);
 			}
 		}
 		return 0;
@@ -72,7 +73,6 @@ int my_mount(char * filesys, char * pathname)
 	}
 	else printf("%s opened correctly with fd %d: open check passed\n", filesys, fd);
 
-	printf("\nrunning->cwd->dev: %d, new dev: %d\n", running->cwd->dev, fd);
 	dev = fd;
     get_block(fd, 1, buf);
     ext = (SUPER*)buf;
@@ -95,7 +95,7 @@ int my_mount(char * filesys, char * pathname)
 		printf("\n%s does not exist: mount failed\n", pathname);
 		return -1;
 	}
-	else printf("%s does exist: existence check passed\n", pathname);
+	else printf("%s does exist at ino %d: existence check passed\n", pathname, ino);
 
 	mip = iget(running->cwd->dev, ino); //get minode into memory
 
@@ -124,18 +124,18 @@ int my_mount(char * filesys, char * pathname)
 	//
 	//6. allocate a FREE (dev = 0) mountTable[] for newdev;
 	//   record new DEV, ninodes, nblocks, bmap, imap, iblk in mountTable[]
-	
+
 	mptr->dev = dev;
+	if (pathname[0] = '/') pathname++;
 	strncpy(mptr->name, pathname, NLENGTH);
 	strncpy(mptr->mount_name, filesys, NLENGTH);
 	mptr->ninodes = ext->s_inodes_count;
 	mptr->nblocks = ext->s_blocks_count;
 	get_block(mptr->dev, 2, buf);
-	// global var
-	gp = (GD *)buf;
-	mptr->bmap = gp->bg_block_bitmap;
-	mptr->imap = gp->bg_inode_bitmap;
-	mptr->blk = gp->bg_inode_table;
+	g = (GD *)buf; 
+	mptr->bmap = g->bg_block_bitmap;
+	mptr->imap = g->bg_inode_bitmap;
+	mptr->blk = g->bg_inode_table;
 
 	//7. mark mount_point's as being mounted on and let it point at the MOUNT table entry,
 	//   which points back to the mount_point minode.
@@ -151,26 +151,28 @@ int my_mount(char * filesys, char * pathname)
 
 int my_umount(char *filesys)
 {
-	int i, j, count = 0;
+	int i, j;
 
-	MOUNT* umnt = 0;
+	MOUNT * mptr;
 
 	//1. search the MOUNT table to check filesys is indeed mounted
 	
 	for(i = 0; i < NMOUNT; i++)
 	{
-		if(strcmp(mountTable[i].name, filesys) == 0)
+		if(mountTable[i].dev && !strcmp(mountTable[i].mount_name, filesys)) // not FREE and has same name
 		{
-			count++;
+			mptr = &mountTable[i];
 			break;
 		}
 	}
-	//not mounted
-	if(count == 0)
+
+	//if not mounted
+	if(mptr == NULL)
 	{
-		printf("Attention: %s is not mounted!\n", filesys);
+		printf("\n%s is not mounted: umount failed\n", filesys);
 		return -1;
 	}
+	else printf("%s is mounted: mount check passed\n", filesys);
 
 	//2. check whether any file is still active in the mounted filesys;
 	//	e.g. someone's CWD or opened files are still there,
@@ -179,22 +181,22 @@ int my_umount(char *filesys)
 	//
 	//compare cwd->dev to MINODE->devs
 	for(j = 0; j < NMINODE; j++)
-	{
-		if(minode[j].refCount && minode[j].mounted && (minode[j].mptr->dev == umnt->dev))
+	{ 
+		if(minode[j].dev == mptr->dev)
 		{
-			//close(umnt->dev);
-			minode[j].mptr = 0;
-			iput(&minode[j]);
-			umnt->mounted_inode = 0;
-			umnt->dev = 0;
-			break;
+			printf("\ndetected file [ino %d] still active in mounted filesystem %s: umount failed\n", minode[j].ino, filesys);
+			return -1;
 		}
 	}
+	printf("no active files still detected in the mounted filesystem %s: active check passed\n", filesys);
 		
+	mptr->dev = 0; // FREE
 	//3. find the mount_point's inode (which should be in mem while its mounted on)
+	MINODE * mip = mptr->mounted_inode;
 	//   reset it to "not mounted"
+	mip->mounted = 0;
 	//   then iput() the minode (bc it was iget()ed during mounting)
-	//
+	iput(mip);
 
 	//4. return 1 for success
 	printf("\numount successful\n");
