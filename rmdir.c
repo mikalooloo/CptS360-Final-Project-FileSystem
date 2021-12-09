@@ -185,8 +185,8 @@ int my_rmdir(char * pathname) {
     }
     else printf("%s is a DIR: DIR check passed\n", pathname);
 
-    // minode is not BUSY (refCount = 1);
-    if (mip->refCount != 1) {
+    // minode is not BUSY
+    if (mip->refCount > 2) {
         printf("\nminode is busy as refCount is %d: rmdir failed\n", mip->refCount);
         return -1;
     }
