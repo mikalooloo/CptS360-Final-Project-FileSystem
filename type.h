@@ -33,6 +33,7 @@ DIR   *dp;
 #define NPROC       2
 #define NFD        16
 #define NMOUNT      8
+#define NLENGTH    64
 
 typedef struct minode{
   INODE INODE;           // INODE structure on disk
@@ -72,8 +73,8 @@ typedef struct Mount{
 	int imap;
 	int blk;
 	MINODE *mounted_inode;
-	char name[64]; //device name, e.g. mydisk
-	char mount_name[64]; //mounted DIR pathname;
+	char name[NLENGTH]; //device name, e.g. mydisk
+	char mount_name[NLENGTH]; //mounted DIR pathname;
 }MOUNT;
 
 #endif
