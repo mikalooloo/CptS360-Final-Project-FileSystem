@@ -2,14 +2,7 @@
 
 if [ -z $1 ] # if user does not pass a disk name via command line
 then
-	sudo dd if=/dev/zero of=diskimage bs=1024 count=1440
-	sudo mke2fs -b 1024 diskimage 1440
-
-	sudo mount diskimage /mnt
-
-	(cd /mnt; sudo rmdir lost+found; ls -l)
-
-	sudo umount /mnt
+	./mkdisk
 else # if user did pass a disk name via command line
 	sudo mount $1 /mnt
 	
