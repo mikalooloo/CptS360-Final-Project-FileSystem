@@ -6,7 +6,9 @@ cpts360_project
 ### This project was to make our own filesystem in C, using similar structures and processes to that of Unix/Linux and MTX Operating Systems, with 3 levels of completion. 
 This project was given credit for all 3 levels.
 This includes programming the following functions to work in our filesystem:
-  ```ls -l, mkdir, rmdir, creat, cd, pwd, link, unlink, symlink, cat, cp, mount, umount```
+
+```ls -l, mkdir, rmdir, creat, cd, pwd, link, unlink, symlink, cat, cp, mount, umount```
+
 and more. 
 
 ### Some other targets and learning points of this project include the following:
