@@ -61,6 +61,7 @@ and more.
 - [ ] add permission checking
 - [ ] finish write_file() and read_file(); both user-focused versions of cp() and cat()
 - [ ] finish mv()
+- [ ] improve KC's base code to fit better with my style of programming
 - [ ] add more uniformity to the code; create standard naming conventions, comment style, and more 
 
 In retrospect, creating standards to be used and referenced throughout the code before starting the project can ensure less work on both the programmers and anyone reviewing the code. It will be easier to build off of previous commits and will be easier to understand. 
